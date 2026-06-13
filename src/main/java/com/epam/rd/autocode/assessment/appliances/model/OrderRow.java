@@ -25,4 +25,7 @@ public class OrderRow {
     private Long number;
     @NotNull
     private BigDecimal amount;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_id")
+    private Orders order;
 }

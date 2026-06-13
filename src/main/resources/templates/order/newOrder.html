@@ -1,42 +1,34 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-    <!-- Latest compiled and minified CSS -->
+    <meta charset="UTF-8">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- Latest compiled JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <title>Manufacturers list</title>
+    <title>New Order</title>
 </head>
 <body>
 <div th:insert="~{menunavy::navy}"></div>
 <h1 th:text="#{orders.btn.new}"></h1>
-<form action="#" th:action="@{add-order}" th:object="${order}" method="post">
-    <p><span th:text="#{object.order.id}"></span> <input type="text" th:field="*{id}"/></p>
+<form action="#" th:action="@{add}" th:object="${order}" method="post">
     <p>
-        <!--        <p th:if="${#fields.hasErrors('powerType')}" class="text-danger">Invalid power type</p>-->
         <span th:text="#{object.order.client}"></span>
-
-        <select th:field="*{client}">
+        <select th:field="*{clientId}">
             <option th:each="client : ${clients}" th:value="${client.id}" th:text="${client.name}"></option>
         </select>
+        <span th:if="${#fields.hasErrors('clientId')}" th:errors="*{clientId}" class="text-danger"></span>
     </p>
     <p>
-        <!--        <p th:if="${#fields.hasErrors('powerType')}" class="text-danger">Invalid power type</p>-->
         <span th:text="#{object.order.employee}"></span>
-
-        <select th:field="*{employee}">
+        <select th:field="*{employeeId}">
             <option th:each="employee : ${employees}" th:value="${employee.id}" th:text="${employee.name}"></option>
         </select>
+        <span th:if="${#fields.hasErrors('employeeId')}" th:errors="*{employeeId}" class="text-danger"></span>
     </p>
-
     <div class="btn-group">
         <button type="submit" class="btn btn-primary">Create</button>
         <input type="reset" class="btn btn-secondary" value="Reset"/>
     </div>
 </form>
-
 <div th:insert="~{footer::footer}"></div>
 </body>
 </html>

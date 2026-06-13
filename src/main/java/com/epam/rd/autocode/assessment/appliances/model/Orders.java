@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.HashSet;
 import java.util.Set;
 
 @Setter
@@ -21,7 +22,7 @@ public class Orders {
     private Employee employee;
     @ManyToOne
     private Client client;
-    @OneToMany
-    private Set<OrderRow> orderRowSet;
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<OrderRow> orderRowSet = new HashSet<>();
     private Boolean approved;
 }

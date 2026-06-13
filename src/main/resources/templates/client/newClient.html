@@ -12,27 +12,26 @@
 <body>
 <div th:insert="~{menunavy::navy}"></div>
 <h1 th:text="#{client.btn.new}"></h1>
-<form action="#" th:action="@{add-client}" th:object="${client}" method="post">
+<form action="#" th:action="@{add}" th:object="${client}" method="post">
     <p>
-        <p th:if="${#fields.hasErrors('name')}" class="text-danger" th:text="#{user.name.is.mandatory}"></p>
-        <span th:text="#{object.user.name}">
-        </span> <input type="text" th:field="*{name}"/>
+        <span th:text="#{object.user.name}"></span>
+        <input type="text" th:field="*{name}"/>
+        <span th:if="${#fields.hasErrors('name')}" th:errors="*{name}" class="text-danger"></span>
     </p>
     <p>
-        <p th:if="${#fields.hasErrors('email')}" class="text-danger" th:text="#{user.email.is.correctly}"></p>
-        <p th:if="${#fields.hasErrors('email')}" class="text-danger" th:text="#{user.email.is.blank}"></p>
         <span th:text="#{object.user.email}"></span>
         <input type="text" th:field="*{email}"/>
+        <span th:if="${#fields.hasErrors('email')}" th:errors="*{email}" class="text-danger"></span>
     </p>
     <p>
-        <p th:if="${#fields.hasErrors('password')}" class="text-danger" th:text="#{user.password.is.correctly}">Invalid password</p>
         <span th:text="#{object.user.password}"></span>
         <input type="text" th:field="*{password}"/>
+        <span th:if="${#fields.hasErrors('password')}" th:errors="*{password}" class="text-danger"></span>
     </p>
     <p>
-        <p th:if="${#fields.hasErrors('card')}" class="text-danger">Invalid card</p>
         <span th:text="#{object.client.card}"></span>
         <input type="text" th:field="*{card}"/>
+        <span th:if="${#fields.hasErrors('card')}" th:errors="*{card}" class="text-danger"></span>
     </p>
     <p><input type="submit" value="Submit"/> <input type="reset" value="Reset"/></p>
 </form>

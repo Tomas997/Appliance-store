@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<body>
+
+<th th:fragment="sortHeader(field, labelKey)">
+    <a th:data-field="${field}"
+       onclick="sortBy(this.dataset.field)"
+       class="text-white text-decoration-none"
+       style="cursor: pointer">
+        <span th:text="#{__${labelKey}__}"></span>
+        <i th:if="${sortField == field}"
+           th:class="${sortDir == 'asc'} ? 'fa fa-sort-asc' : 'fa fa-sort-desc'"></i>
+    </a>
+</th>
+
+
+<div th:fragment="pagination" class="d-flex align-items-center my-3">
+
+    <!-- Зліва: кількість елементів -->
+    <div style="min-width: 180px" class="d-flex align-items-center gap-2">
+        <label class="text-nowrap small text-muted">На сторінці:</label>
+        <select class="form-select form-select-sm w-auto" onchange="changePageSize(this.value)">
+            <option value="10"  th:selected="${pageSize == 10}">10</option>
+            <option value="25"  th:selected="${pageSize == 25}">25</option>
+            <option value="50"  th:selected="${pageSize == 50}">50</option>
+        </select>
+    </div>
+
+    <!-- По центру: номери сторінок -->
+    <div class="flex-grow-1 d-flex justify-content-center">
+        <nav th:if="${totalPages > 1}">
+            <ul class="pagination mb-0">
+
+                <!-- Назад -->
+                <li class="page-item" th:classappend="${currentPage == 0} ? disabled">
+                    <a class="page-link" th:onclick="'goToPage(' + ${currentPage - 1} + ')'">
+                        &laquo;
+                    </a>
+                </li>
+
+                <!-- Номери -->
+                <li class="page-item"
+                    th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
+                    th:classappend="${i == currentPage} ? active">
+                    <a class="page-link"
+                       th:onclick="'goToPage(' + ${i} + ')'"
+                       th:text="${i + 1}">
+                    </a>
+                </li>
+
+                <!-- Вперед -->
+                <li class="page-item"
+                    th:classappend="${currentPage == totalPages - 1} ? disabled">
+                    <a class="page-link" th:onclick="'goToPage(' + ${currentPage + 1} + ')'">
+                        &raquo;
+                    </a>
+                </li>
+
+            </ul>
+        </nav>
+    </div>
+
+    <!-- Правий спейсер для симетрії -->
+    <div style="min-width: 180px"></div>
+
+</div>
+</body>
+</html>
