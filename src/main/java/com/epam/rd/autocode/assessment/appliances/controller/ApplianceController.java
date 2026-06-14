@@ -79,7 +79,7 @@ public class ApplianceController {
         return "redirect:/appliances";
     }
 
-    @GetMapping("/{id}/delete")
+    @DeleteMapping("/{id}")
     public String deleteAppliance(@PathVariable Long id) {
         applianceService.deleteApplianceById(id);
         return "redirect:/appliances";

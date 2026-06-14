@@ -54,9 +54,13 @@
         <td th:text="${row.number}"/>
         <td th:text="${row.amount}"/>
         <td>
-            <a th:href="@{/orders/{rowId}/delete-row(rowId=${row.id}, orderId=${orderId})}">
-                <i class="fa fa-times"></i>
-            </a>
+            <form th:action="@{/orders/{rowId}/row(rowId=${row.id})}" method="post" style="display:inline;">
+                <input type="hidden" name="_method" value="delete"/>
+                <input type="hidden" name="orderId" th:value="${orderId}"/>
+                <button type="submit" class="btn btn-sm btn-danger">
+                    <i class="fa fa-times"></i>
+                </button>
+            </form>
         </td>
     </tr>
     </tbody>

@@ -5,6 +5,7 @@ import com.epam.rd.autocode.assessment.appliances.dto.ApplianceResponseDTO;
 import com.epam.rd.autocode.assessment.appliances.model.Appliance;
 import com.epam.rd.autocode.assessment.appliances.repository.ApplianceRepository;
 import com.epam.rd.autocode.assessment.appliances.repository.ManufacturerRepository;
+import com.epam.rd.autocode.assessment.appliances.exception.ResourceNotFoundException;
 import com.epam.rd.autocode.assessment.appliances.service.ApplianceService;
 import lombok.AllArgsConstructor;
 import org.modelmapper.ModelMapper;
@@ -42,7 +43,7 @@ public class ApplianceServiceImpl implements ApplianceService {
     @Override
     public ApplianceRequestDTO findById(Long id) {
         Appliance appliance = applianceRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Appliance not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Appliance", id));
         ApplianceRequestDTO dto = modelMapper.map(appliance, ApplianceRequestDTO.class);
         dto.setManufacturerId(appliance.getManufacturer().getId());
         return dto;
@@ -51,10 +52,10 @@ public class ApplianceServiceImpl implements ApplianceService {
     @Override
     public void updateAppliance(Long id, ApplianceRequestDTO dto) {
         Appliance appliance = applianceRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Appliance not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Appliance", id));
         modelMapper.map(dto, appliance);
         appliance.setManufacturer(manufacturerRepository.findById(dto.getManufacturerId())
-                .orElseThrow(() -> new RuntimeException("Manufacturer not found: " + dto.getManufacturerId())));
+                .orElseThrow(() -> new ResourceNotFoundException("Manufacturer", dto.getManufacturerId())));
         applianceRepository.save(appliance);
     }
 
@@ -70,7 +71,7 @@ public class ApplianceServiceImpl implements ApplianceService {
     private Appliance toEntity(ApplianceRequestDTO dto) {
         Appliance appliance = modelMapper.map(dto, Appliance.class);
         appliance.setManufacturer(manufacturerRepository.findById(dto.getManufacturerId())
-                .orElseThrow(() -> new RuntimeException("Manufacturer not found: " + dto.getManufacturerId())));
+                .orElseThrow(() -> new ResourceNotFoundException("Manufacturer", dto.getManufacturerId())));
         return appliance;
     }
 }

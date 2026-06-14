@@ -37,11 +37,12 @@
                 <a th:href="@{/clients/{id}/edit(id=${client.id})}" class="btn btn-sm btn-warning">
                     <i class="fa fa-pencil"></i>
                 </a>
-                <a th:href="@{clients/}+${client.id}+@{/delete}">
-                    <span class="icon">
-                          <i class="fa fa-minus"></i>
-                    </span>
-                </a>
+                <form th:action="@{/clients/{id}(id=${client.id})}" method="post" style="display:inline;">
+                    <input type="hidden" name="_method" value="delete"/>
+                    <button type="submit" class="btn btn-sm btn-danger">
+                        <i class="fa fa-minus"></i>
+                    </button>
+                </form>
             </div>
         </td>
     </tr>

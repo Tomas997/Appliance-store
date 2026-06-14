@@ -4,6 +4,7 @@ import com.epam.rd.autocode.assessment.appliances.dto.ManufacturerRequestDTO;
 import com.epam.rd.autocode.assessment.appliances.dto.ManufacturerResponseDTO;
 import com.epam.rd.autocode.assessment.appliances.model.Manufacturer;
 import com.epam.rd.autocode.assessment.appliances.repository.ManufacturerRepository;
+import com.epam.rd.autocode.assessment.appliances.exception.ResourceNotFoundException;
 import com.epam.rd.autocode.assessment.appliances.service.ManufacturerService;
 import lombok.AllArgsConstructor;
 import org.modelmapper.ModelMapper;
@@ -40,14 +41,14 @@ public class ManufacturerServiceImpl implements ManufacturerService {
     @Override
     public ManufacturerRequestDTO findById(Long id) {
         Manufacturer manufacturer = manufacturerRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Manufacturer not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Manufacturer", id));
         return modelMapper.map(manufacturer, ManufacturerRequestDTO.class);
     }
 
     @Override
     public void updateManufacturer(Long id, ManufacturerRequestDTO dto) {
         Manufacturer manufacturer = manufacturerRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Manufacturer not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Manufacturer", id));
         manufacturer.setName(dto.getName());
         manufacturerRepository.save(manufacturer);
     }

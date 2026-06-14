@@ -37,14 +37,20 @@
             <td><span class="float-end" th:text="${order.employeeName}"/></td>
             <td>
                 <div th:if="${order.approved}">
-                    <a th:href="@{orders/}+${order.id}+@{/unapproved}">
-                        <span class="icon"><i class="fa fa-check"></i></span>
-                    </a>
+                    <form th:action="@{/orders/{id}/unapproved(id=${order.id})}" method="post" style="display:inline;">
+                        <input type="hidden" name="_method" value="patch"/>
+                        <button type="submit" class="btn btn-sm btn-success">
+                            <i class="fa fa-check"></i>
+                        </button>
+                    </form>
                 </div>
                 <div th:unless="${order.approved}">
-                    <a th:href="@{orders/}+${order.id}+@{/approved}">
-                        <span class="icon"><i class="fa fa-minus"></i></span>
-                    </a>
+                    <form th:action="@{/orders/{id}/approved(id=${order.id})}" method="post" style="display:inline;">
+                        <input type="hidden" name="_method" value="patch"/>
+                        <button type="submit" class="btn btn-sm btn-secondary">
+                            <i class="fa fa-minus"></i>
+                        </button>
+                    </form>
                 </div>
             </td>
             <td th:text="${order.totalAmount}"></td>
@@ -53,11 +59,12 @@
                     <a th:href="@{orders/}+${order.id}+@{/edit}" class="btn btn-sm btn-warning">
                         <i class="fa fa-pencil"></i>
                     </a>
-                    <a th:href="@{orders/}+${order.id}+@{/delete}">
-                        <span class="icon">
+                    <form th:action="@{/orders/{id}(id=${order.id})}" method="post" style="display:inline;">
+                        <input type="hidden" name="_method" value="delete"/>
+                        <button type="submit" class="btn btn-sm btn-danger">
                             <i class="fa fa-minus"></i>
-                        </span>
-                    </a>
+                        </button>
+                    </form>
                 </div>
             </td>
         </tr>

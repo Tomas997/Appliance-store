@@ -74,7 +74,7 @@ public class ManufacturerController {
         return "redirect:/manufacturers";
     }
 
-    @GetMapping("/{id}/delete")
+    @DeleteMapping("/{id}")
     public String deleteManufacturer(@PathVariable Long id) {
         manufacturerService.deleteManufacturerById(id);
         return "redirect:/manufacturers";

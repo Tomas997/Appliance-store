@@ -5,6 +5,7 @@ import com.epam.rd.autocode.assessment.appliances.dto.EmployeeRequestDTO;
 import com.epam.rd.autocode.assessment.appliances.dto.EmployeeResponseDTO;
 import com.epam.rd.autocode.assessment.appliances.model.Employee;
 import com.epam.rd.autocode.assessment.appliances.repository.EmployeeRepository;
+import com.epam.rd.autocode.assessment.appliances.exception.ResourceNotFoundException;
 import com.epam.rd.autocode.assessment.appliances.service.EmployeeService;
 import lombok.AllArgsConstructor;
 import org.modelmapper.ModelMapper;
@@ -45,14 +46,14 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     public EmployeeRequestDTO findById(Long id) {
         Employee employee = employeeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Employee not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee", id));
         return modelMapper.map(employee, EmployeeRequestDTO.class);
     }
 
     @Override
     public void updateEmployee(Long id, EmployeeRequestDTO dto) {
         Employee employee = employeeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Employee not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee", id));
         employee.setName(dto.getName());
         employee.setEmail(dto.getEmail());
         employee.setDepartment(dto.getDepartment());

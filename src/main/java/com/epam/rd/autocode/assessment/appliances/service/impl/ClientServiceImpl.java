@@ -3,6 +3,7 @@ package com.epam.rd.autocode.assessment.appliances.service.impl;
 import com.epam.rd.autocode.assessment.appliances.dto.ClientRequestDTO;
 import com.epam.rd.autocode.assessment.appliances.dto.ClientResponseDTO;
 import com.epam.rd.autocode.assessment.appliances.dto.ClientUpdateDTO;
+import com.epam.rd.autocode.assessment.appliances.exception.ResourceNotFoundException;
 import com.epam.rd.autocode.assessment.appliances.model.Client;
 import com.epam.rd.autocode.assessment.appliances.repository.ClientRepository;
 import com.epam.rd.autocode.assessment.appliances.service.ClientService;
@@ -48,14 +49,14 @@ public class ClientServiceImpl implements ClientService {
     @Override
     public ClientUpdateDTO findById(Long id) {
         Client client = clientRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Client not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Client", id));
         return modelMapper.map(client, ClientUpdateDTO.class);
     }
 
     @Override
     public void updateClient(Long id, ClientUpdateDTO clientDto) {
         Client client = clientRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Client not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Client", id));
         client.setName(clientDto.getName());
         client.setEmail(clientDto.getEmail());
         client.setCard(clientDto.getCard());

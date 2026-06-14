@@ -10,6 +10,8 @@ import com.epam.rd.autocode.assessment.appliances.repository.ApplianceRepository
 import com.epam.rd.autocode.assessment.appliances.repository.ClientRepository;
 import com.epam.rd.autocode.assessment.appliances.repository.EmployeeRepository;
 import com.epam.rd.autocode.assessment.appliances.repository.OrdersRepository;
+import com.epam.rd.autocode.assessment.appliances.exception.InvalidOrderStateException;
+import com.epam.rd.autocode.assessment.appliances.exception.ResourceNotFoundException;
 import com.epam.rd.autocode.assessment.appliances.service.OrderService;
 import lombok.AllArgsConstructor;
 import org.modelmapper.ModelMapper;
@@ -52,7 +54,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public OrderRequestDTO findById(Long id) {
         Orders order = ordersRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Order not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Order", id));
         OrderRequestDTO dto = modelMapper.map(order, OrderRequestDTO.class);
         dto.setEmployeeId(order.getEmployee().getId());
         dto.setClientId(order.getClient().getId());
@@ -62,11 +64,11 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public void updateOrder(Long id, OrderRequestDTO dto) {
         Orders order = ordersRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Order not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Order", id));
         order.setEmployee(employeeRepository.findById(dto.getEmployeeId())
-                .orElseThrow(() -> new RuntimeException("Employee not found: " + dto.getEmployeeId())));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee", dto.getEmployeeId())));
         order.setClient(clientRepository.findById(dto.getClientId())
-                .orElseThrow(() -> new RuntimeException("Client not found: " + dto.getClientId())));
+                .orElseThrow(() -> new ResourceNotFoundException("Client", dto.getClientId())));
         order.setApproved(dto.getApproved());
         ordersRepository.save(order);
     }
@@ -79,7 +81,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public void approveOrder(Long id, boolean approved) {
         Orders order = ordersRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Order not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Order", id));
         order.setApproved(approved);
         ordersRepository.save(order);
     }
@@ -87,9 +89,12 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public void addRowToOrder(Long orderId, Long applianceId, Long number, BigDecimal price) {
         Orders order = ordersRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
+        if (Boolean.TRUE.equals(order.getApproved())) {
+            throw new InvalidOrderStateException("Cannot modify an approved order");
+        }
         Appliance appliance = applianceRepository.findById(applianceId)
-                .orElseThrow(() -> new RuntimeException("Appliance not found: " + applianceId));
+                .orElseThrow(() -> new ResourceNotFoundException("Appliance", applianceId));
         OrderRow row = new OrderRow();
         row.setAppliance(appliance);
         row.setNumber(number);
@@ -106,7 +111,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public Set<OrderRow> getOrderRows(Long orderId) {
         Orders order = ordersRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
         return order.getOrderRowSet();
     }
 
@@ -124,9 +129,9 @@ public class OrderServiceImpl implements OrderService {
     private Orders toEntity(OrderRequestDTO dto) {
         Orders order = modelMapper.map(dto, Orders.class);
         order.setEmployee(employeeRepository.findById(dto.getEmployeeId())
-                .orElseThrow(() -> new RuntimeException("Employee not found: " + dto.getEmployeeId())));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee", dto.getEmployeeId())));
         order.setClient(clientRepository.findById(dto.getClientId())
-                .orElseThrow(() -> new RuntimeException("Client not found: " + dto.getClientId())));
+                .orElseThrow(() -> new ResourceNotFoundException("Client", dto.getClientId())));
         return order;
     }
 }

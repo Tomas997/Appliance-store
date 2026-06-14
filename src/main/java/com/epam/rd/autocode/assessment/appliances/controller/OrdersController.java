@@ -83,19 +83,19 @@ public class OrdersController {
         return "redirect:/orders";
     }
 
-    @GetMapping("/{id}/delete")
+    @DeleteMapping("/{id}")
     public String deleteOrder(@PathVariable Long id) {
         orderService.deleteOrderById(id);
         return "redirect:/orders";
     }
 
-    @GetMapping("/{id}/approved")
+    @PatchMapping("/{id}/approved")
     public String approveOrder(@PathVariable Long id) {
         orderService.approveOrder(id, true);
         return "redirect:/orders";
     }
 
-    @GetMapping("/{id}/unapproved")
+    @PatchMapping("/{id}/unapproved")
     public String unapproveOrder(@PathVariable Long id) {
         orderService.approveOrder(id, false);
         return "redirect:/orders";
@@ -117,7 +117,7 @@ public class OrdersController {
         return "redirect:/orders/" + ordersId + "/edit";
     }
 
-    @GetMapping("/{rowId}/delete-row")
+    @DeleteMapping("/{rowId}/row")
     public String deleteRow(@PathVariable Long rowId,
                             @RequestParam Long orderId) {
         orderService.deleteRowFromOrder(rowId);

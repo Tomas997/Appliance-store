@@ -51,11 +51,12 @@
                     <a th:href="@{/appliances/{id}/edit(id=${appliance.id})}" class="btn btn-sm btn-warning">
                         <i class="fa fa-pencil"></i>
                     </a>
-                    <a th:href="@{/appliances/}+${appliance.id}+@{/delete}">
-                        <span class="icon">
+                    <form th:action="@{/appliances/{id}(id=${appliance.id})}" method="post" style="display:inline;">
+                        <input type="hidden" name="_method" value="delete"/>
+                        <button type="submit" class="btn btn-sm btn-danger">
                             <i class="fa fa-minus"></i>
-                        </span>
-                    </a>
+                        </button>
+                    </form>
                 </div>
             </td>
         </tr>
