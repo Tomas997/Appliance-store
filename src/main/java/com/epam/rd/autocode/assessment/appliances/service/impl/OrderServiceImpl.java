@@ -17,6 +17,7 @@ import lombok.AllArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -79,6 +80,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
     public void approveOrder(Long id, boolean approved) {
         Orders order = ordersRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", id));

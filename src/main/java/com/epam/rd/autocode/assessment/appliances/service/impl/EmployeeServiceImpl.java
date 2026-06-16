@@ -11,6 +11,7 @@ import lombok.AllArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -37,6 +38,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
     @Override
+    @PreAuthorize("hasRole('ADMIN')")
     public void saveEmployee(EmployeeRequestDTO dto) {
         Employee employee = toEntity(dto);
         employee.setPassword(passwordEncoder.encode(dto.getPassword()));
@@ -51,6 +53,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
     @Override
+    @PreAuthorize("hasRole('ADMIN')")
     public void updateEmployee(Long id, EmployeeRequestDTO dto) {
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee", id));
@@ -64,6 +67,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
     @Override
+    @PreAuthorize("hasRole('ADMIN')")
     public void deleteEmployeeById(Long id) {
         employeeRepository.deleteById(id);
     }

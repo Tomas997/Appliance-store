@@ -1,11 +1,11 @@
 package com.epam.rd.autocode.assessment.appliances.dto;
 
+import com.epam.rd.autocode.assessment.appliances.validation.StrongPassword;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.validator.constraints.Length;
 
 @Getter
 @Setter
@@ -18,7 +18,7 @@ public class ClientUpdateDTO {
     @Email(message = "{user.email.is.correctly}")
     private String email;
 
-    @Length(min = 8, message = "{user.password.too.short}")
+    @StrongPassword
     private String password;
 
     @NotBlank(message = "{client.card.is.mandatory}")

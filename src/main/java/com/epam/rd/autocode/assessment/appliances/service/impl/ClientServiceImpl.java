@@ -13,6 +13,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -67,6 +68,7 @@ public class ClientServiceImpl implements ClientService {
     }
 
     @Override
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
     public void deleteClientById(Long clientId) {
         clientRepository.deleteById(clientId);
     }
