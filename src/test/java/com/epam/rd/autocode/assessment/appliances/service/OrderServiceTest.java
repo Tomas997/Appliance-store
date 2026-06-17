@@ -14,7 +14,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.*;
 
 import java.math.BigDecimal;
@@ -37,18 +36,18 @@ public class OrderServiceTest {
     private ClientRepository clientRepository;
 
     @Mock
+    private DelivererRepository delivererRepository;
+
+    @Mock
     private ApplianceRepository applianceRepository;
 
     @Mock
     private ApplianceInOrderRepository applianceInOrderRepository;
 
-    @Mock
-    private ModelMapper modelMapper;
-
     @InjectMocks
     private OrderServiceImpl orderService;
 
-    private Orders buildOrder(Long id, boolean approved) {
+    private Orders buildOrder() {
         Employee employee = new Employee();
         employee.setName("Олег");
         Client client = new Client();
@@ -57,26 +56,25 @@ public class OrderServiceTest {
         Orders order = new Orders();
         order.setEmployee(employee);
         order.setClient(client);
-        order.setApproved(approved);
+        order.setStatus(OrderStatus.PENDING_EMPLOYEE);
         order.setOrderRowSet(new HashSet<>());
         return order;
     }
 
     @Test
-    @DisplayName("findAll: повинен повернути список DTO для всіх замовлень")
+    @DisplayName("findAll: повинен повернути список DTO з іменами співробітника і клієнта")
     void findAll_shouldReturnMappedDtoList() {
-        Orders order = buildOrder(1L, false);
-        OrderResponseDTO dto = new OrderResponseDTO();
+        Orders order = buildOrder();
 
         when(ordersRepository.findAll()).thenReturn(List.of(order));
-        when(modelMapper.map(order, OrderResponseDTO.class)).thenReturn(dto);
 
         List<OrderResponseDTO> result = orderService.findAll();
 
-        assertThat(result).containsExactly(dto);
-        assertThat(dto.getEmployeeName()).isEqualTo("Олег");
-        assertThat(dto.getClientName()).isEqualTo("Марія");
-        assertThat(dto.getTotalAmount()).isEqualTo(BigDecimal.ZERO);
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getEmployeeName()).isEqualTo("Олег");
+        assertThat(result.get(0).getClientName()).isEqualTo("Марія");
+        assertThat(result.get(0).getTotalAmount()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(result.get(0).getStatus()).isEqualTo(OrderStatus.PENDING_EMPLOYEE);
     }
 
     @Test
@@ -87,24 +85,22 @@ public class OrderServiceTest {
         List<OrderResponseDTO> result = orderService.findAll();
 
         assertThat(result).isEmpty();
-        verifyNoInteractions(modelMapper);
     }
 
     @Test
     @DisplayName("findAll(Pageable): повинен передати Pageable в репозиторій і повернути сторінку DTO")
     void findAll_withPageable_shouldReturnMappedPage() {
         Pageable pageable = PageRequest.of(0, 10);
-        Orders order = buildOrder(1L, false);
-        OrderResponseDTO dto = new OrderResponseDTO();
+        Orders order = buildOrder();
         Page<Orders> page = new PageImpl<>(List.of(order), pageable, 1);
 
-        when(ordersRepository.findAll(pageable)).thenReturn(page);
-        when(modelMapper.map(order, OrderResponseDTO.class)).thenReturn(dto);
+        when(ordersRepository.findByStatusNot(OrderStatus.DRAFT, pageable)).thenReturn(page);
 
         Page<OrderResponseDTO> result = orderService.findAll(pageable);
 
-        assertThat(result.getContent()).containsExactly(dto);
+        assertThat(result.getContent()).hasSize(1);
         assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent().get(0).getClientName()).isEqualTo("Марія");
     }
 
     @Test
@@ -116,9 +112,7 @@ public class OrderServiceTest {
 
         Employee employee = new Employee();
         Client client = new Client();
-        Orders order = new Orders();
 
-        when(modelMapper.map(dto, Orders.class)).thenReturn(order);
         when(employeeRepository.findById(1L)).thenReturn(Optional.of(employee));
         when(clientRepository.findById(2L)).thenReturn(Optional.of(client));
 
@@ -128,6 +122,7 @@ public class OrderServiceTest {
         verify(ordersRepository).save(captor.capture());
         assertThat(captor.getValue().getEmployee()).isSameAs(employee);
         assertThat(captor.getValue().getClient()).isSameAs(client);
+        assertThat(captor.getValue().getStatus()).isEqualTo(OrderStatus.PENDING_EMPLOYEE);
     }
 
     @Test
@@ -137,8 +132,6 @@ public class OrderServiceTest {
         dto.setEmployeeId(99L);
         dto.setClientId(1L);
 
-        Orders order = new Orders();
-        when(modelMapper.map(dto, Orders.class)).thenReturn(order);
         when(employeeRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> orderService.saveOrder(dto))
@@ -150,13 +143,8 @@ public class OrderServiceTest {
     @DisplayName("saveOrder: якщо клієнта не знайдено — кинути ResourceNotFoundException")
     void saveOrder_whenClientNotFound_shouldThrow() {
         OrderRequestDTO dto = new OrderRequestDTO();
-        dto.setEmployeeId(1L);
         dto.setClientId(99L);
 
-        Orders order = new Orders();
-        Employee employee = new Employee();
-        when(modelMapper.map(dto, Orders.class)).thenReturn(order);
-        when(employeeRepository.findById(1L)).thenReturn(Optional.of(employee));
         when(clientRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> orderService.saveOrder(dto))
@@ -176,14 +164,10 @@ public class OrderServiceTest {
         order.setEmployee(employee);
         order.setClient(client);
 
-        OrderRequestDTO dto = new OrderRequestDTO();
-
         when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
-        when(modelMapper.map(order, OrderRequestDTO.class)).thenReturn(dto);
 
         OrderRequestDTO result = orderService.findById(1L);
 
-        assertThat(result).isSameAs(dto);
         assertThat(result.getEmployeeId()).isEqualTo(10L);
         assertThat(result.getClientId()).isEqualTo(20L);
     }
@@ -199,30 +183,25 @@ public class OrderServiceTest {
     }
 
     @Test
-    @DisplayName("updateOrder: повинен оновити співробітника, клієнта і статус, потім зберегти")
+    @DisplayName("updateOrder: повинен оновити співробітника і клієнта, потім зберегти")
     void updateOrder_shouldUpdateFieldsAndSave() {
-        Orders existing = new Orders();
-        Employee employee = new Employee();
-        Client client = new Client();
+        Orders existing = buildOrder();
+        Employee newEmployee = new Employee();
+        Client newClient = new Client();
 
         OrderRequestDTO dto = new OrderRequestDTO();
         dto.setEmployeeId(5L);
         dto.setClientId(6L);
-        dto.setApproved(true);
 
         when(ordersRepository.findById(1L)).thenReturn(Optional.of(existing));
-        when(employeeRepository.findById(5L)).thenReturn(Optional.of(employee));
-        when(clientRepository.findById(6L)).thenReturn(Optional.of(client));
+        when(employeeRepository.findById(5L)).thenReturn(Optional.of(newEmployee));
 
         orderService.updateOrder(1L, dto);
 
         ArgumentCaptor<Orders> captor = ArgumentCaptor.forClass(Orders.class);
         verify(ordersRepository).save(captor.capture());
 
-        Orders saved = captor.getValue();
-        assertThat(saved.getEmployee()).isSameAs(employee);
-        assertThat(saved.getClient()).isSameAs(client);
-        assertThat(saved.getApproved()).isTrue();
+        assertThat(captor.getValue().getEmployee()).isSameAs(newEmployee);
     }
 
     @Test
@@ -236,44 +215,62 @@ public class OrderServiceTest {
     }
 
     @Test
-    @DisplayName("deleteOrderById: повинен делегувати видалення в репозиторій")
+    @DisplayName("deleteOrderById: повинен делегувати видалення якщо замовлення не доставляється")
     void deleteOrderById_shouldDelegateToRepository() {
+        Orders order = buildOrder();
+        when(ordersRepository.findById(8L)).thenReturn(Optional.of(order));
+
         orderService.deleteOrderById(8L);
 
         verify(ordersRepository).deleteById(8L);
-        verifyNoMoreInteractions(ordersRepository);
     }
 
     @Test
-    @DisplayName("approveOrder: повинен встановити approved і зберегти замовлення")
-    void approveOrder_shouldSetApprovedAndSave() {
-        Orders order = new Orders();
-        order.setApproved(false);
-
+    @DisplayName("deleteOrderById: якщо замовлення доставляється — кинути InvalidOrderStateException")
+    void deleteOrderById_whenDelivering_shouldThrow() {
+        Orders order = buildOrder();
+        order.setStatus(OrderStatus.DELIVERING);
         when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
 
-        orderService.approveOrder(1L, true);
+        assertThatThrownBy(() -> orderService.deleteOrderById(1L))
+                .isInstanceOf(InvalidOrderStateException.class);
+    }
+
+    @Test
+    @DisplayName("approveByEmployee: повинен встановити нотатку і статус PENDING_CLIENT")
+    void approveByEmployee_shouldSetNoteAndStatus() {
+        Orders order = buildOrder();
+        Employee employee = new Employee();
+        employee.setName("Іван");
+
+        when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(employeeRepository.findByEmail("ivan@store.com")).thenReturn(Optional.of(employee));
+
+        orderService.approveByEmployee(1L, "Alternative suggested", "ivan@store.com");
 
         ArgumentCaptor<Orders> captor = ArgumentCaptor.forClass(Orders.class);
         verify(ordersRepository).save(captor.capture());
-        assertThat(captor.getValue().getApproved()).isTrue();
+
+        Orders saved = captor.getValue();
+        assertThat(saved.getStatus()).isEqualTo(OrderStatus.PENDING_DELIVERY);
+        assertThat(saved.getEmployeeNote()).isNull();
     }
 
     @Test
-    @DisplayName("approveOrder: повинен кинути ResourceNotFoundException якщо замовлення не знайдено")
-    void approveOrder_whenNotFound_shouldThrow() {
-        when(ordersRepository.findById(99L)).thenReturn(Optional.empty());
+    @DisplayName("approveByEmployee: якщо статус не PENDING_EMPLOYEE — кинути InvalidOrderStateException")
+    void approveByEmployee_whenWrongStatus_shouldThrow() {
+        Orders order = buildOrder();
+        order.setStatus(OrderStatus.PENDING_CLIENT);
+        when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
 
-        assertThatThrownBy(() -> orderService.approveOrder(99L, true))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessageContaining("99");
+        assertThatThrownBy(() -> orderService.approveByEmployee(1L, null, "ivan@store.com"))
+                .isInstanceOf(InvalidOrderStateException.class);
     }
 
     @Test
     @DisplayName("addRowToOrder: повинен створити рядок замовлення з обчисленою сумою і зберегти")
     void addRowToOrder_shouldCreateRowWithComputedAmountAndSave() {
-        Orders order = new Orders();
-        order.setApproved(false);
+        Orders order = buildOrder();
         Appliance appliance = new Appliance();
 
         when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
@@ -292,10 +289,10 @@ public class OrderServiceTest {
     }
 
     @Test
-    @DisplayName("addRowToOrder: якщо замовлення підтверджено — кинути InvalidOrderStateException")
-    void addRowToOrder_whenOrderApproved_shouldThrow() {
-        Orders order = new Orders();
-        order.setApproved(true);
+    @DisplayName("addRowToOrder: якщо статус не PENDING_EMPLOYEE — кинути InvalidOrderStateException")
+    void addRowToOrder_whenNotPendingEmployee_shouldThrow() {
+        Orders order = buildOrder();
+        order.setStatus(OrderStatus.PENDING_CLIENT);
 
         when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
 
@@ -316,8 +313,7 @@ public class OrderServiceTest {
     @Test
     @DisplayName("addRowToOrder: якщо прилад не знайдено — кинути ResourceNotFoundException")
     void addRowToOrder_whenApplianceNotFound_shouldThrow() {
-        Orders order = new Orders();
-        order.setApproved(false);
+        Orders order = buildOrder();
 
         when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
         when(applianceRepository.findById(99L)).thenReturn(Optional.empty());
@@ -343,7 +339,7 @@ public class OrderServiceTest {
         OrderRow row2 = new OrderRow();
         Set<OrderRow> rows = new HashSet<>(Set.of(row1, row2));
 
-        Orders order = new Orders();
+        Orders order = buildOrder();
         order.setOrderRowSet(rows);
 
         when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
