@@ -3,11 +3,10 @@
 
 <body>
 
-<th th:fragment="sortHeader(field, labelKey)">
-    <a th:data-field="${field}"
-       onclick="sortBy(this.dataset.field)"
-       class="text-white text-decoration-none"
-       style="cursor: pointer">
+<th th:fragment="sortHeader(field, labelKey)"
+    th:with="nextDir=${(sortField == field and sortDir == 'asc') ? 'desc' : 'asc'}">
+    <a th:href="|?page=0&size=${pageSize}&sort=${field},${nextDir}|"
+       class="text-white text-decoration-none">
         <span th:text="#{__${labelKey}__}"></span>
         <i th:if="${sortField == field}"
            th:class="${sortDir == 'asc'} ? 'fa fa-sort-asc' : 'fa fa-sort-desc'"></i>
@@ -20,11 +19,12 @@
     <!-- Зліва: кількість елементів -->
     <div style="min-width: 180px" class="d-flex align-items-center gap-2">
         <label class="text-nowrap small text-muted">На сторінці:</label>
-        <select class="form-select form-select-sm w-auto" onchange="changePageSize(this.value)">
-            <option value="10"  th:selected="${pageSize == 10}">10</option>
-            <option value="25"  th:selected="${pageSize == 25}">25</option>
-            <option value="50"  th:selected="${pageSize == 50}">50</option>
-        </select>
+        <a th:each="size : ${ {10, 25, 50} }"
+           th:href="|?page=0&size=${size}&sort=${sortField},${sortDir}|"
+           th:text="${size}"
+           th:classappend="${pageSize == size} ? 'fw-bold text-decoration-underline' : ''"
+           class="link-secondary mx-1">
+        </a>
     </div>
 
     <!-- По центру: номери сторінок -->
@@ -34,7 +34,7 @@
 
                 <!-- Назад -->
                 <li class="page-item" th:classappend="${currentPage == 0} ? disabled">
-                    <a class="page-link" th:onclick="'goToPage(' + ${currentPage - 1} + ')'">
+                    <a class="page-link" th:href="|?page=${currentPage - 1}&size=${pageSize}&sort=${sortField},${sortDir}|">
                         &laquo;
                     </a>
                 </li>
@@ -44,7 +44,7 @@
                     th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
                     th:classappend="${i == currentPage} ? active">
                     <a class="page-link"
-                       th:onclick="'goToPage(' + ${i} + ')'"
+                       th:href="|?page=${i}&size=${pageSize}&sort=${sortField},${sortDir}|"
                        th:text="${i + 1}">
                     </a>
                 </li>
@@ -52,7 +52,7 @@
                 <!-- Вперед -->
                 <li class="page-item"
                     th:classappend="${currentPage == totalPages - 1} ? disabled">
-                    <a class="page-link" th:onclick="'goToPage(' + ${currentPage + 1} + ')'">
+                    <a class="page-link" th:href="|?page=${currentPage + 1}&size=${pageSize}&sort=${sortField},${sortDir}|">
                         &raquo;
                     </a>
                 </li>
