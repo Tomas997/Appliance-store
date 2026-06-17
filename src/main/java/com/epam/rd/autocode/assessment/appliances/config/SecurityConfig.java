@@ -4,10 +4,10 @@ import com.epam.rd.autocode.assessment.appliances.service.CustomUserDetailsServi
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -63,12 +63,15 @@ public class SecurityConfig {
                 .requestMatchers("/", "/login", "/error").permitAll()
                 .requestMatchers("/css/**", "/js/**").permitAll()
                 .requestMatchers("/h2-console/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.GET, "/appliances", "/appliances/").hasAnyRole("ADMIN", "EMPLOYEE", "CLIENT")
                 .requestMatchers("/appliances/**").hasAnyRole("ADMIN", "EMPLOYEE")
                 .requestMatchers("/manufacturers/**").hasAnyRole("ADMIN", "EMPLOYEE")
                 .requestMatchers("/orders/**").hasAnyRole("ADMIN", "EMPLOYEE")
-                .requestMatchers("/clients/**").hasAnyRole("ADMIN", "EMPLOYEE")
+                .requestMatchers(HttpMethod.GET, "/clients/**").hasAnyRole("ADMIN", "EMPLOYEE")
+                .requestMatchers("/clients/**").hasRole("ADMIN")
                 .requestMatchers("/employees/**").hasRole("ADMIN")
+                .requestMatchers("/deliverers/**").hasRole("ADMIN")
+                .requestMatchers("/my-orders/**").hasRole("CLIENT")
+                .requestMatchers("/deliveries/**").hasRole("DELIVERER")
                 .anyRequest().authenticated()
             )
             .csrf(csrf -> csrf.ignoringRequestMatchers("/h2-console/**"))

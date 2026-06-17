@@ -9,11 +9,8 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class OrderRequestDTO {
-    @NotNull(message = "{order.employee.is.mandatory}")
     private Long employeeId;
 
     @NotNull(message = "{order.client.is.mandatory}")
     private Long clientId;
-
-    private Boolean approved = false;
 }

@@ -1,5 +1,6 @@
 package com.epam.rd.autocode.assessment.appliances.dto;
 
+import com.epam.rd.autocode.assessment.appliances.model.OrderStatus;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -15,6 +16,8 @@ public class OrderResponseDTO {
     private Long id;
     private String employeeName;
     private String clientName;
-    private Boolean approved;
+    private String delivererName;
+    private OrderStatus status;
+    private String employeeNote;
     private BigDecimal totalAmount;
 }
