@@ -13,4 +13,6 @@ public class OrderRequestDTO {
 
     @NotNull(message = "{order.client.is.mandatory}")
     private Long clientId;
+
+    private String employeeNote;
 }
