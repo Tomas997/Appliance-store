@@ -1,14 +1,15 @@
-INSERT INTO appliance (name, category, model, manufacturer_id, power_type, characteristic, description, power, price)
-    VALUES ('Claw', 'BIG', '-----',1,'ACCUMULATOR','-------','-----',600, 1.01);
-INSERT INTO appliance (name, category, model, manufacturer_id, power_type, characteristic, description, power, price)
-    VALUES ('Bane', 'SMALL', '-----',3,'AC110','--------','-----',2200, 2.01);
-INSERT INTO appliance (name, category, model, manufacturer_id, power_type, characteristic, description, power, price)
-    VALUES ('Ecu', 'SMALL', '-----',2,'ACCUMULATOR','--------','-----',800, 3.01);
-INSERT INTO appliance (name, category, model, manufacturer_id, power_type, characteristic, description, power, price)
-    VALUES ('Kang Dae', 'BIG', '-----',4,'AC220','--------','-----',3600, 4.01);
-INSERT INTO appliance (name, category, model, manufacturer_id, power_type, characteristic, description, power, price)
-    VALUES ('Gust', 'BIG', '-----',5,'ACCUMULATOR','--------','-----',650, 5.01);
-INSERT INTO appliance (name, category, model, manufacturer_id, power_type, characteristic, description, power, price)
-    VALUES ('Ancile', 'SMALL', '-----',6,'AC220','--------','-----',230, 6.01);
-INSERT INTO appliance (name, category, model, manufacturer_id, power_type, characteristic, description, power, price)
-    VALUES ('Halo', 'BIG', '-----',7,'ACCUMULATOR','--------','-----',300, 7.01);
+INSERT INTO appliance (name, category, model, manufacturer_id, power_type, characteristic, description, power, price) VALUES
+    ('Claw', 'BIG', '-----', 1, 'ACCUMULATOR', '-------', '-----', 600, 1.01),
+    ('Bane', 'SMALL', '-----', 3, 'AC110', '--------', '-----', 2200, 2.01),
+    ('Ecu', 'SMALL', '-----', 2, 'ACCUMULATOR', '--------', '-----', 800, 3.01),
+    ('Kang Dae', 'BIG', '-----', 4, 'AC220', '--------', '-----', 3600, 4.01),
+    ('Gust', 'BIG', '-----', 5, 'ACCUMULATOR', '--------', '-----', 650, 5.01),
+    ('Ancile', 'SMALL', '-----', 6, 'AC220', '--------', '-----', 230, 6.01),
+    ('Halo', 'BIG', '-----', 7, 'ACCUMULATOR', '--------', '-----', 300, 7.01),
+    ('Vortex', 'BIG', 'V-100', 8, 'AC220', '--------', '-----', 1800, 8.01),
+    ('Zephyr', 'SMALL', 'Z-200', 9, 'ACCUMULATOR', '--------', '-----', 450, 9.01),
+    ('Tundra', 'BIG', 'T-300', 10, 'AC220', '--------', '-----', 2700, 10.01),
+    ('Comet', 'SMALL', 'C-400', 11, 'AC110', '--------', '-----', 180, 11.01),
+    ('Meteor', 'BIG', 'M-500', 12, 'ACCUMULATOR', '--------', '-----', 3200, 12.01),
+    ('Quasar', 'SMALL', 'Q-600', 1, 'AC220', '--------', '-----', 520, 13.01),
+    ('Nebula', 'BIG', 'N-700', 2, 'AC110', '--------', '-----', 1500, 14.01);
