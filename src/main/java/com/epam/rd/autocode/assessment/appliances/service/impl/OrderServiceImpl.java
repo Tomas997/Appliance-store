@@ -1,7 +1,9 @@
 package com.epam.rd.autocode.assessment.appliances.service.impl;
 
+import com.epam.rd.autocode.assessment.appliances.aspect.Loggable;
 import com.epam.rd.autocode.assessment.appliances.dto.OrderRequestDTO;
 import com.epam.rd.autocode.assessment.appliances.dto.OrderResponseDTO;
+import com.epam.rd.autocode.assessment.appliances.dto.OrderRowPriceChangeDTO;
 import com.epam.rd.autocode.assessment.appliances.exception.InvalidOrderStateException;
 import com.epam.rd.autocode.assessment.appliances.exception.ResourceNotFoundException;
 import com.epam.rd.autocode.assessment.appliances.model.*;
@@ -14,6 +16,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -36,12 +40,23 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Page<OrderResponseDTO> findAll(Pageable pageable) {
-        return ordersRepository.findByStatusNot(OrderStatus.DRAFT, pageable).map(this::toDto);
+        return ordersRepository.findByStatusNotIn(List.of(OrderStatus.DRAFT, OrderStatus.CANCELLED), pageable)
+                .map(this::toDto);
+    }
+
+    @Override
+    public Page<OrderResponseDTO> findCancelled(Pageable pageable) {
+        return ordersRepository.findByStatus(OrderStatus.CANCELLED, pageable).map(this::toDto);
     }
 
     @Override
     public Page<OrderResponseDTO> findByClientEmail(String email, Pageable pageable) {
-        return ordersRepository.findByClient_Email(email, pageable).map(this::toDto);
+        return ordersRepository.findByClient_EmailAndStatusNot(email, OrderStatus.CANCELLED, pageable).map(this::toDto);
+    }
+
+    @Override
+    public Page<OrderResponseDTO> findCancelledByClientEmail(String email, Pageable pageable) {
+        return ordersRepository.findByClient_EmailAndStatus(email, OrderStatus.CANCELLED, pageable).map(this::toDto);
     }
 
     @Override
@@ -50,11 +65,23 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    public Page<OrderResponseDTO> findDelivering(Pageable pageable) {
+        return ordersRepository.findByStatus(OrderStatus.DELIVERING, pageable).map(this::toDto);
+    }
+
+    @Override
+    public Page<OrderResponseDTO> findDelivered(Pageable pageable) {
+        return ordersRepository.findByStatus(OrderStatus.DELIVERED, pageable).map(this::toDto);
+    }
+
+    @Override
+    @Loggable
     public void saveOrder(OrderRequestDTO dto) {
         ordersRepository.save(toEntity(dto));
     }
 
     @Override
+    @Loggable
     public Long createClientOrder(String clientEmail) {
         Client client = clientRepository.findByEmail(clientEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Client", clientEmail));
@@ -83,11 +110,13 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Loggable
     public void updateOrder(Long id, OrderRequestDTO dto) {
         Orders order = ordersRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", id));
-        if (order.getStatus() == OrderStatus.PENDING_DELIVERY || order.getStatus() == OrderStatus.DELIVERING) {
-            throw new InvalidOrderStateException("Cannot edit an order that is pending delivery or being delivered");
+        if (order.getStatus() == OrderStatus.PENDING_DELIVERY || order.getStatus() == OrderStatus.DELIVERING
+                || order.getStatus() == OrderStatus.DELIVERED) {
+            throw new InvalidOrderStateException("Cannot edit an order that is pending delivery, being delivered, or already delivered");
         }
         if (dto.getEmployeeId() != null) {
             order.setEmployee(employeeRepository.findById(dto.getEmployeeId())
@@ -99,16 +128,18 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Loggable
     public void deleteOrderById(Long id) {
         Orders order = ordersRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", id));
-        if (order.getStatus() == OrderStatus.DELIVERING) {
-            throw new InvalidOrderStateException("Cannot delete an order that is being delivered");
+        if (order.getStatus() == OrderStatus.DELIVERING || order.getStatus() == OrderStatus.DELIVERED) {
+            throw new InvalidOrderStateException("Cannot delete an order that is being delivered or already delivered");
         }
         ordersRepository.deleteById(id);
     }
 
     @Override
+    @Loggable
     @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
     public void approveByEmployee(Long id, String note, String employeeEmail) {
         Orders order = ordersRepository.findById(id)
@@ -123,6 +154,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Loggable
     @PreAuthorize("hasRole('DELIVERER')")
     public void acceptByDeliverer(Long id, String delivererEmail) {
         Orders order = ordersRepository.findById(id)
@@ -138,6 +170,20 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Loggable
+    @PreAuthorize("hasRole('DELIVERER')")
+    public void markAsDelivered(Long id, String delivererEmail) {
+        Orders order = ordersRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", id));
+        if (order.getStatus() != OrderStatus.DELIVERING) {
+            throw new InvalidOrderStateException("Order is not being delivered");
+        }
+        order.setStatus(OrderStatus.DELIVERED);
+        ordersRepository.save(order);
+    }
+
+    @Override
+    @Loggable
     @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
     public void requestRevision(Long id, String note, String employeeEmail) {
         Orders order = ordersRepository.findById(id)
@@ -154,8 +200,9 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Loggable
     @PreAuthorize("hasRole('CLIENT')")
-    public void submitForReview(Long id) {
+    public List<OrderRowPriceChangeDTO> submitForReview(Long id) {
         Orders order = ordersRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", id));
         if (order.getStatus() != OrderStatus.DRAFT && order.getStatus() != OrderStatus.PENDING_EMPLOYEE) {
@@ -164,23 +211,50 @@ public class OrderServiceImpl implements OrderService {
         if (order.getOrderRowSet().isEmpty()) {
             throw new InvalidOrderStateException("Cannot submit an empty order — add at least one item");
         }
+        List<OrderRowPriceChangeDTO> priceChanges = new ArrayList<>();
+        for (OrderRow row : order.getOrderRowSet()) {
+            BigDecimal currentAmount = row.getAppliance().getPrice().multiply(BigDecimal.valueOf(row.getNumber()));
+            if (currentAmount.compareTo(row.getAmount()) != 0) {
+                priceChanges.add(new OrderRowPriceChangeDTO(row.getAppliance().getName(), row.getAmount(), currentAmount));
+                row.setAmount(currentAmount);
+            }
+        }
+        if (!priceChanges.isEmpty()) {
+            // prices changed since the items were added — persist the updated amounts but
+            // don't submit yet, so the client can see the new prices and confirm by submitting again
+            ordersRepository.save(order);
+            return priceChanges;
+        }
         order.setStatus(OrderStatus.PENDING_EMPLOYEE);
         order.setEmployeeNote(null); // clear note to signal client addressed the revision
         ordersRepository.save(order);
+        return priceChanges;
     }
 
     @Override
-    public void cancelOrder(Long id) {
+    @Loggable
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE','CLIENT')")
+    public void cancelOrder(Long id, String reason, String cancelledByEmail) {
         Orders order = ordersRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", id));
-        if (order.getStatus() == OrderStatus.DELIVERING) {
-            throw new InvalidOrderStateException("Cannot cancel an order that is already being delivered");
+        if (order.getStatus() == OrderStatus.DELIVERING || order.getStatus() == OrderStatus.DELIVERED) {
+            throw new InvalidOrderStateException("Cannot cancel an order that is being delivered or already delivered");
+        }
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new InvalidOrderStateException("Order is already cancelled");
+        }
+        if (reason == null || reason.isBlank()) {
+            throw new InvalidOrderStateException("A reason is required when cancelling an order");
         }
         order.setStatus(OrderStatus.CANCELLED);
+        order.setCancelReason(reason);
+        order.setCancelledAt(LocalDateTime.now());
+        order.setCancelledBy(cancelledByEmail);
         ordersRepository.save(order);
     }
 
     @Override
+    @Loggable
     public void addRowToOrder(Long orderId, Long applianceId, Long number, BigDecimal price) {
         Orders order = ordersRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
@@ -198,7 +272,14 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Loggable
     public void deleteRowFromOrder(Long rowId) {
+        OrderRow row = applianceInOrderRepository.findById(rowId)
+                .orElseThrow(() -> new ResourceNotFoundException("OrderRow", rowId));
+        Orders order = row.getOrder();
+        if (order.getStatus() != OrderStatus.DRAFT && order.getStatus() != OrderStatus.PENDING_EMPLOYEE) {
+            throw new InvalidOrderStateException("Cannot modify order in current state");
+        }
         applianceInOrderRepository.deleteById(rowId);
     }
 
@@ -217,6 +298,10 @@ public class OrderServiceImpl implements OrderService {
         dto.setDelivererName(order.getDeliverer() != null ? order.getDeliverer().getName() : "—");
         dto.setStatus(order.getStatus());
         dto.setEmployeeNote(order.getEmployeeNote());
+        dto.setCreatedAt(order.getCreatedAt());
+        dto.setCancelReason(order.getCancelReason());
+        dto.setCancelledAt(order.getCancelledAt());
+        dto.setCancelledBy(order.getCancelledBy());
         BigDecimal total = order.getOrderRowSet().stream()
                 .map(OrderRow::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);

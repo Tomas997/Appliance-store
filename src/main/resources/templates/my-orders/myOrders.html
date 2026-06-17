@@ -14,12 +14,25 @@
 <main class="container mt-3">
     <h1 th:text="#{my.orders.header.list}">My Orders</h1>
 
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item">
+            <a class="nav-link" th:classappend="${!cancelled} ? 'active'" th:href="@{/my-orders}" th:text="#{orders.tab.active}"></a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" th:classappend="${cancelled} ? 'active'" th:href="@{/my-orders(cancelled=true)}" th:text="#{orders.tab.cancelled}"></a>
+        </li>
+    </ul>
+
     <table class="table table-hover">
         <thead>
         <tr class="table-dark">
             <th th:text="#{object.user.id}">ID</th>
             <th th:text="#{object.order.status}">Status</th>
-            <th th:text="#{object.order.note}">Note</th>
+            <th th:text="#{object.order.created}">Created</th>
+            <th th:unless="${cancelled}" th:text="#{object.order.note}">Note</th>
+            <th th:if="${cancelled}" th:text="#{object.order.cancel.reason}"></th>
+            <th th:if="${cancelled}" th:text="#{object.order.cancelled.by}"></th>
+            <th th:if="${cancelled}" th:text="#{object.order.cancelled.at}"></th>
             <th th:text="#{object.order.amount}">Amount</th>
             <th th:text="#{object.operation}">Actions</th>
         </tr>
@@ -35,10 +48,15 @@
                                     : (${order.status.name() == 'PENDING_CLIENT'} ? 'badge bg-warning text-dark'
                                     : (${order.status.name() == 'PENDING_DELIVERY'} ? 'badge bg-primary'
                                     : (${order.status.name() == 'DELIVERING'} ? 'badge bg-success'
-                                    : 'badge bg-light text-dark border')))))">
+                                    : (${order.status.name() == 'DELIVERED'} ? 'badge bg-dark'
+                                    : 'badge bg-light text-dark border'))))))">
                 </span>
             </td>
-            <td th:text="${order.employeeNote}"></td>
+            <td th:text="${order.createdAt != null} ? ${#temporals.format(order.createdAt, 'yyyy-MM-dd HH:mm')} : ''"></td>
+            <td th:unless="${cancelled}" th:text="${order.employeeNote}"></td>
+            <td th:if="${cancelled}" th:text="${order.cancelReason}"></td>
+            <td th:if="${cancelled}" th:text="${order.cancelledBy}"></td>
+            <td th:if="${cancelled}" th:text="${order.cancelledAt != null} ? ${#temporals.format(order.cancelledAt, 'yyyy-MM-dd HH:mm')} : ''"></td>
             <td th:text="${order.totalAmount}"></td>
             <td>
                 <div class="d-flex gap-2">
@@ -56,12 +74,10 @@
                         <button type="submit" class="btn btn-sm btn-primary" th:text="#{my.orders.btn.submit}"></button>
                     </form>
 
-                    <form th:unless="${order.status.name() == 'DELIVERING'}"
-                          th:action="@{/my-orders/{id}/cancel(id=${order.id})}" method="post" style="display:inline;">
-                        <input type="hidden" name="_method" value="patch"/>
-                        <button type="submit" class="btn btn-sm btn-secondary" th:text="#{my.orders.btn.cancel}"></button>
-                    </form>
-                    <form th:unless="${order.status.name() == 'DELIVERING'}"
+                    <a th:unless="${order.status.name() == 'DELIVERING' or order.status.name() == 'DELIVERED' or order.status.name() == 'CANCELLED'}"
+                       th:href="@{/my-orders/{id}/cancel(id=${order.id})}" class="btn btn-sm btn-secondary"
+                       th:text="#{my.orders.btn.cancel}"></a>
+                    <form th:unless="${order.status.name() == 'DELIVERING' or order.status.name() == 'DELIVERED'}"
                           th:action="@{/my-orders/{id}(id=${order.id})}" method="post" style="display:inline;">
                         <input type="hidden" name="_method" value="delete"/>
                         <button type="submit" class="btn btn-sm btn-danger">

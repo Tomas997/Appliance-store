@@ -67,7 +67,7 @@ class OrdersControllerTest {
     @DisplayName("GET /orders: повинен повернути сторінку зі списком замовлень та атрибутами пагінації")
     void getOrders_shouldReturnOrdersViewWithPaginationAttributes() throws Exception {
         OrderResponseDTO dto = new OrderResponseDTO(1L, "Employee", "Client", "Deliverer",
-                OrderStatus.DRAFT, "note", BigDecimal.TEN);
+                OrderStatus.DRAFT, "note", BigDecimal.TEN, null, null, null, null);
         Page<OrderResponseDTO> page = new PageImpl<>(
                 List.of(dto),
                 PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "id")),
@@ -145,7 +145,7 @@ class OrdersControllerTest {
         OrderRequestDTO requestDTO = new OrderRequestDTO();
         requestDTO.setClientId(1L);
         OrderResponseDTO responseDTO = new OrderResponseDTO(1L, "Employee", "Client", "Deliverer",
-                OrderStatus.DRAFT, "note", BigDecimal.TEN);
+                OrderStatus.DRAFT, "note", BigDecimal.TEN, null, null, null, null);
         when(orderService.findById(1L)).thenReturn(requestDTO);
         when(orderService.findResponseById(1L)).thenReturn(responseDTO);
         when(orderService.getOrderRows(1L)).thenReturn(Set.of());
@@ -235,6 +235,49 @@ class OrdersControllerTest {
                 .andExpect(redirectedUrl("/orders"));
 
         verify(orderService).requestRevision(1L, "please fix", "employee@store.com");
+    }
+
+    @Test
+    @DisplayName("GET /orders?cancelled=true: повинен показати скасовані замовлення")
+    void getOrders_cancelled_shouldUseFindCancelled() throws Exception {
+        when(orderService.findCancelled(any(Pageable.class))).thenReturn(new PageImpl<>(List.of()));
+
+        mockMvc.perform(get("/orders").param("cancelled", "true"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("order/orders"))
+                .andExpect(model().attribute("cancelled", true));
+
+        verify(orderService).findCancelled(any(Pageable.class));
+        verify(orderService, never()).findAll(any(Pageable.class));
+    }
+
+    @Test
+    @DisplayName("GET /orders/{id}/cancel: повинен повернути сторінку підтвердження скасування")
+    void cancelOrderForm_shouldReturnCancelOrderView() throws Exception {
+        OrderResponseDTO responseDTO = new OrderResponseDTO(1L, "Employee", "Client", "Deliverer",
+                OrderStatus.DRAFT, "note", BigDecimal.TEN, null, null, null, null);
+        when(orderService.findResponseById(1L)).thenReturn(responseDTO);
+
+        mockMvc.perform(get("/orders/{id}/cancel", 1L))
+                .andExpect(status().isOk())
+                .andExpect(view().name("order/cancelOrder"))
+                .andExpect(model().attribute("orderInfo", responseDTO))
+                .andExpect(model().attribute("orderId", 1L));
+    }
+
+    @Test
+    @DisplayName("PATCH /orders/{id}/cancel: повинен скасувати замовлення з причиною і перенаправити на список")
+    void cancelOrder_shouldCallServiceWithReasonAndRedirect() throws Exception {
+        UsernamePasswordAuthenticationToken principal =
+                new UsernamePasswordAuthenticationToken("employee@store.com", null);
+
+        mockMvc.perform(patch("/orders/{id}/cancel", 1L)
+                        .principal(principal)
+                        .param("reason", "Out of stock"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/orders"));
+
+        verify(orderService).cancelOrder(1L, "Out of stock", "employee@store.com");
     }
 
     @Test

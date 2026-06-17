@@ -2,6 +2,7 @@ package com.epam.rd.autocode.assessment.appliances.service;
 
 import com.epam.rd.autocode.assessment.appliances.dto.OrderRequestDTO;
 import com.epam.rd.autocode.assessment.appliances.dto.OrderResponseDTO;
+import com.epam.rd.autocode.assessment.appliances.dto.OrderRowPriceChangeDTO;
 import com.epam.rd.autocode.assessment.appliances.exception.InvalidOrderStateException;
 import com.epam.rd.autocode.assessment.appliances.exception.ResourceNotFoundException;
 import com.epam.rd.autocode.assessment.appliances.model.*;
@@ -94,7 +95,7 @@ public class OrderServiceTest {
         Orders order = buildOrder();
         Page<Orders> page = new PageImpl<>(List.of(order), pageable, 1);
 
-        when(ordersRepository.findByStatusNot(OrderStatus.DRAFT, pageable)).thenReturn(page);
+        when(ordersRepository.findByStatusNotIn(List.of(OrderStatus.DRAFT, OrderStatus.CANCELLED), pageable)).thenReturn(page);
 
         Page<OrderResponseDTO> result = orderService.findAll(pageable);
 
@@ -104,18 +105,50 @@ public class OrderServiceTest {
     }
 
     @Test
+    @DisplayName("findCancelled: повинен повернути сторінку скасованих замовлень")
+    void findCancelled_shouldReturnMappedPage() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Orders order = buildOrder();
+        order.setStatus(OrderStatus.CANCELLED);
+        Page<Orders> page = new PageImpl<>(List.of(order), pageable, 1);
+
+        when(ordersRepository.findByStatus(OrderStatus.CANCELLED, pageable)).thenReturn(page);
+
+        Page<OrderResponseDTO> result = orderService.findCancelled(pageable);
+
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getStatus()).isEqualTo(OrderStatus.CANCELLED);
+    }
+
+    @Test
     @DisplayName("findByClientEmail: повинен передати email і Pageable в репозиторій і повернути сторінку DTO")
     void findByClientEmail_shouldReturnMappedPage() {
         Pageable pageable = PageRequest.of(0, 10);
         Orders order = buildOrder();
         Page<Orders> page = new PageImpl<>(List.of(order), pageable, 1);
 
-        when(ordersRepository.findByClient_Email("maria@store.com", pageable)).thenReturn(page);
+        when(ordersRepository.findByClient_EmailAndStatusNot("maria@store.com", OrderStatus.CANCELLED, pageable)).thenReturn(page);
 
         Page<OrderResponseDTO> result = orderService.findByClientEmail("maria@store.com", pageable);
 
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().get(0).getClientName()).isEqualTo("Марія");
+    }
+
+    @Test
+    @DisplayName("findCancelledByClientEmail: повинен повернути сторінку скасованих замовлень клієнта")
+    void findCancelledByClientEmail_shouldReturnMappedPage() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Orders order = buildOrder();
+        order.setStatus(OrderStatus.CANCELLED);
+        Page<Orders> page = new PageImpl<>(List.of(order), pageable, 1);
+
+        when(ordersRepository.findByClient_EmailAndStatus("maria@store.com", OrderStatus.CANCELLED, pageable)).thenReturn(page);
+
+        Page<OrderResponseDTO> result = orderService.findCancelledByClientEmail("maria@store.com", pageable);
+
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getStatus()).isEqualTo(OrderStatus.CANCELLED);
     }
 
     @Test
@@ -228,6 +261,73 @@ public class OrderServiceTest {
     }
 
     @Test
+    @DisplayName("markAsDelivered: повинен перевести замовлення в статус DELIVERED")
+    void markAsDelivered_shouldSetDeliveredStatus() {
+        Orders order = buildOrder();
+        order.setStatus(OrderStatus.DELIVERING);
+        when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        orderService.markAsDelivered(1L, "driver@store.com");
+
+        ArgumentCaptor<Orders> captor = ArgumentCaptor.forClass(Orders.class);
+        verify(ordersRepository).save(captor.capture());
+        assertThat(captor.getValue().getStatus()).isEqualTo(OrderStatus.DELIVERED);
+    }
+
+    @Test
+    @DisplayName("markAsDelivered: якщо статус не DELIVERING — кинути InvalidOrderStateException")
+    void markAsDelivered_whenWrongStatus_shouldThrow() {
+        Orders order = buildOrder();
+        order.setStatus(OrderStatus.PENDING_DELIVERY);
+        when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        assertThatThrownBy(() -> orderService.markAsDelivered(1L, "driver@store.com"))
+                .isInstanceOf(InvalidOrderStateException.class);
+    }
+
+    @Test
+    @DisplayName("markAsDelivered: повинен кинути ResourceNotFoundException якщо замовлення не знайдено")
+    void markAsDelivered_whenOrderNotFound_shouldThrow() {
+        when(ordersRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> orderService.markAsDelivered(99L, "driver@store.com"))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("99");
+    }
+
+    @Test
+    @DisplayName("findDelivering: повинен повернути сторінку замовлень зі статусом DELIVERING")
+    void findDelivering_shouldReturnMappedPage() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Orders order = buildOrder();
+        order.setStatus(OrderStatus.DELIVERING);
+        Page<Orders> page = new PageImpl<>(List.of(order), pageable, 1);
+
+        when(ordersRepository.findByStatus(OrderStatus.DELIVERING, pageable)).thenReturn(page);
+
+        Page<OrderResponseDTO> result = orderService.findDelivering(pageable);
+
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getStatus()).isEqualTo(OrderStatus.DELIVERING);
+    }
+
+    @Test
+    @DisplayName("findDelivered: повинен повернути сторінку замовлень зі статусом DELIVERED")
+    void findDelivered_shouldReturnMappedPage() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Orders order = buildOrder();
+        order.setStatus(OrderStatus.DELIVERED);
+        Page<Orders> page = new PageImpl<>(List.of(order), pageable, 1);
+
+        when(ordersRepository.findByStatus(OrderStatus.DELIVERED, pageable)).thenReturn(page);
+
+        Page<OrderResponseDTO> result = orderService.findDelivered(pageable);
+
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getStatus()).isEqualTo(OrderStatus.DELIVERED);
+    }
+
+    @Test
     @DisplayName("requestRevision: повинен встановити нотатку і зберегти без зміни статусу")
     void requestRevision_shouldSetNoteAndSave() {
         Orders order = buildOrder();
@@ -271,16 +371,79 @@ public class OrderServiceTest {
         Orders order = buildOrder();
         order.setStatus(OrderStatus.DRAFT);
         order.setEmployeeNote("old note");
-        order.getOrderRowSet().add(new OrderRow());
+        Appliance appliance = new Appliance();
+        appliance.setPrice(new BigDecimal("50.00"));
+        OrderRow row = new OrderRow();
+        row.setAppliance(appliance);
+        row.setNumber(2L);
+        row.setAmount(new BigDecimal("100.00"));
+        order.getOrderRowSet().add(row);
 
         when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
 
-        orderService.submitForReview(1L);
+        List<OrderRowPriceChangeDTO> priceChanges = orderService.submitForReview(1L);
 
         ArgumentCaptor<Orders> captor = ArgumentCaptor.forClass(Orders.class);
         verify(ordersRepository).save(captor.capture());
         assertThat(captor.getValue().getStatus()).isEqualTo(OrderStatus.PENDING_EMPLOYEE);
         assertThat(captor.getValue().getEmployeeNote()).isNull();
+        assertThat(priceChanges).isEmpty();
+        assertThat(row.getAmount()).isEqualByComparingTo("100.00");
+    }
+
+    @Test
+    @DisplayName("submitForReview: якщо ціна приладу змінилась — повинен оновити суму рядка і повернути зміну")
+    void submitForReview_whenPriceChanged_shouldUpdateAmountAndReturnChange() {
+        Orders order = buildOrder();
+        order.setStatus(OrderStatus.DRAFT);
+        Appliance appliance = new Appliance();
+        appliance.setName("Кондиціонер");
+        appliance.setPrice(new BigDecimal("80.00"));
+        OrderRow row = new OrderRow();
+        row.setAppliance(appliance);
+        row.setNumber(2L);
+        row.setAmount(new BigDecimal("100.00"));
+        order.getOrderRowSet().add(row);
+
+        when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        List<OrderRowPriceChangeDTO> priceChanges = orderService.submitForReview(1L);
+
+        assertThat(priceChanges).hasSize(1);
+        OrderRowPriceChangeDTO change = priceChanges.get(0);
+        assertThat(change.getApplianceName()).isEqualTo("Кондиціонер");
+        assertThat(change.getOldAmount()).isEqualByComparingTo("100.00");
+        assertThat(change.getNewAmount()).isEqualByComparingTo("160.00");
+        assertThat(row.getAmount()).isEqualByComparingTo("160.00");
+
+        ArgumentCaptor<Orders> captor = ArgumentCaptor.forClass(Orders.class);
+        verify(ordersRepository).save(captor.capture());
+        assertThat(captor.getValue().getStatus())
+                .as("замовлення не повинно бути відправлене на першому виклику зі зміненою ціною")
+                .isEqualTo(OrderStatus.DRAFT);
+    }
+
+    @Test
+    @DisplayName("submitForReview: повторний виклик після оновлення ціни — повинен відправити замовлення без попереджень")
+    void submitForReview_whenCalledAgainAfterPriceUpdated_shouldSubmit() {
+        Orders order = buildOrder();
+        order.setStatus(OrderStatus.DRAFT);
+        Appliance appliance = new Appliance();
+        appliance.setPrice(new BigDecimal("80.00"));
+        OrderRow row = new OrderRow();
+        row.setAppliance(appliance);
+        row.setNumber(2L);
+        row.setAmount(new BigDecimal("160.00")); // вже синхронізовано з поточною ціною
+        order.getOrderRowSet().add(row);
+
+        when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        List<OrderRowPriceChangeDTO> priceChanges = orderService.submitForReview(1L);
+
+        assertThat(priceChanges).isEmpty();
+        ArgumentCaptor<Orders> captor = ArgumentCaptor.forClass(Orders.class);
+        verify(ordersRepository).save(captor.capture());
+        assertThat(captor.getValue().getStatus()).isEqualTo(OrderStatus.PENDING_EMPLOYEE);
     }
 
     @Test
@@ -306,16 +469,20 @@ public class OrderServiceTest {
     }
 
     @Test
-    @DisplayName("cancelOrder: повинен перевести замовлення в статус CANCELLED")
+    @DisplayName("cancelOrder: повинен перевести замовлення в статус CANCELLED і записати аудит")
     void cancelOrder_shouldSetCancelledStatus() {
         Orders order = buildOrder();
         when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
 
-        orderService.cancelOrder(1L);
+        orderService.cancelOrder(1L, "Client changed mind", "maria@store.com");
 
         ArgumentCaptor<Orders> captor = ArgumentCaptor.forClass(Orders.class);
         verify(ordersRepository).save(captor.capture());
-        assertThat(captor.getValue().getStatus()).isEqualTo(OrderStatus.CANCELLED);
+        Orders saved = captor.getValue();
+        assertThat(saved.getStatus()).isEqualTo(OrderStatus.CANCELLED);
+        assertThat(saved.getCancelReason()).isEqualTo("Client changed mind");
+        assertThat(saved.getCancelledBy()).isEqualTo("maria@store.com");
+        assertThat(saved.getCancelledAt()).isNotNull();
     }
 
     @Test
@@ -325,7 +492,39 @@ public class OrderServiceTest {
         order.setStatus(OrderStatus.DELIVERING);
         when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
 
-        assertThatThrownBy(() -> orderService.cancelOrder(1L))
+        assertThatThrownBy(() -> orderService.cancelOrder(1L, "reason", "maria@store.com"))
+                .isInstanceOf(InvalidOrderStateException.class);
+    }
+
+    @Test
+    @DisplayName("cancelOrder: якщо замовлення вже доставлене — кинути InvalidOrderStateException")
+    void cancelOrder_whenDelivered_shouldThrow() {
+        Orders order = buildOrder();
+        order.setStatus(OrderStatus.DELIVERED);
+        when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        assertThatThrownBy(() -> orderService.cancelOrder(1L, "reason", "maria@store.com"))
+                .isInstanceOf(InvalidOrderStateException.class);
+    }
+
+    @Test
+    @DisplayName("cancelOrder: якщо замовлення вже скасоване — кинути InvalidOrderStateException")
+    void cancelOrder_whenAlreadyCancelled_shouldThrow() {
+        Orders order = buildOrder();
+        order.setStatus(OrderStatus.CANCELLED);
+        when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        assertThatThrownBy(() -> orderService.cancelOrder(1L, "reason", "maria@store.com"))
+                .isInstanceOf(InvalidOrderStateException.class);
+    }
+
+    @Test
+    @DisplayName("cancelOrder: якщо причина порожня — кинути InvalidOrderStateException")
+    void cancelOrder_whenReasonBlank_shouldThrow() {
+        Orders order = buildOrder();
+        when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        assertThatThrownBy(() -> orderService.cancelOrder(1L, "   ", "maria@store.com"))
                 .isInstanceOf(InvalidOrderStateException.class);
     }
 
@@ -453,6 +652,17 @@ public class OrderServiceTest {
     }
 
     @Test
+    @DisplayName("updateOrder: якщо статус DELIVERED — кинути InvalidOrderStateException")
+    void updateOrder_whenDelivered_shouldThrow() {
+        Orders existing = buildOrder();
+        existing.setStatus(OrderStatus.DELIVERED);
+        when(ordersRepository.findById(1L)).thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> orderService.updateOrder(1L, new OrderRequestDTO()))
+                .isInstanceOf(InvalidOrderStateException.class);
+    }
+
+    @Test
     @DisplayName("updateOrder: якщо employeeId не вказано — повинен очистити співробітника")
     void updateOrder_whenEmployeeIdNull_shouldClearEmployee() {
         Orders existing = buildOrder();
@@ -535,7 +745,7 @@ public class OrderServiceTest {
     void cancelOrder_whenOrderNotFound_shouldThrow() {
         when(ordersRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> orderService.cancelOrder(99L))
+        assertThatThrownBy(() -> orderService.cancelOrder(99L, "reason", "maria@store.com"))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("99");
     }
@@ -566,6 +776,17 @@ public class OrderServiceTest {
     void deleteOrderById_whenDelivering_shouldThrow() {
         Orders order = buildOrder();
         order.setStatus(OrderStatus.DELIVERING);
+        when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        assertThatThrownBy(() -> orderService.deleteOrderById(1L))
+                .isInstanceOf(InvalidOrderStateException.class);
+    }
+
+    @Test
+    @DisplayName("deleteOrderById: якщо замовлення доставлене — кинути InvalidOrderStateException")
+    void deleteOrderById_whenDelivered_shouldThrow() {
+        Orders order = buildOrder();
+        order.setStatus(OrderStatus.DELIVERED);
         when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
 
         assertThatThrownBy(() -> orderService.deleteOrderById(1L))
@@ -660,12 +881,41 @@ public class OrderServiceTest {
     }
 
     @Test
-    @DisplayName("deleteRowFromOrder: повинен делегувати видалення рядка в репозиторій")
+    @DisplayName("deleteRowFromOrder: повинен делегувати видалення рядка в репозиторій якщо замовлення редагується")
     void deleteRowFromOrder_shouldDelegateToRepository() {
+        Orders order = buildOrder();
+        OrderRow row = new OrderRow();
+        row.setOrder(order);
+        when(applianceInOrderRepository.findById(5L)).thenReturn(Optional.of(row));
+
         orderService.deleteRowFromOrder(5L);
 
         verify(applianceInOrderRepository).deleteById(5L);
-        verifyNoMoreInteractions(applianceInOrderRepository);
+    }
+
+    @Test
+    @DisplayName("deleteRowFromOrder: якщо замовлення не в DRAFT/PENDING_EMPLOYEE — кинути InvalidOrderStateException")
+    void deleteRowFromOrder_whenOrderLocked_shouldThrow() {
+        Orders order = buildOrder();
+        order.setStatus(OrderStatus.CANCELLED);
+        OrderRow row = new OrderRow();
+        row.setOrder(order);
+        when(applianceInOrderRepository.findById(5L)).thenReturn(Optional.of(row));
+
+        assertThatThrownBy(() -> orderService.deleteRowFromOrder(5L))
+                .isInstanceOf(InvalidOrderStateException.class);
+
+        verify(applianceInOrderRepository, never()).deleteById(any());
+    }
+
+    @Test
+    @DisplayName("deleteRowFromOrder: якщо рядок не знайдено — кинути ResourceNotFoundException")
+    void deleteRowFromOrder_whenRowNotFound_shouldThrow() {
+        when(applianceInOrderRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> orderService.deleteRowFromOrder(99L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("99");
     }
 
     @Test

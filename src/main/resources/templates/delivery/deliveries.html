@@ -13,6 +13,18 @@
 <main class="container mt-3">
     <h1 th:text="#{deliveries.menu.name}">Deliveries</h1>
 
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item">
+            <a class="nav-link" th:classappend="${tab == 'pending'} ? 'active'" th:href="@{/deliveries(tab='pending')}" th:text="#{deliveries.tab.pending}"></a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" th:classappend="${tab == 'delivering'} ? 'active'" th:href="@{/deliveries(tab='delivering')}" th:text="#{deliveries.tab.delivering}"></a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" th:classappend="${tab == 'delivered'} ? 'active'" th:href="@{/deliveries(tab='delivered')}" th:text="#{deliveries.tab.delivered}"></a>
+        </li>
+    </ul>
+
     <table class="table table-hover">
         <thead>
         <tr class="table-dark">
@@ -20,7 +32,7 @@
             <th th:text="#{object.order.client}">Client</th>
             <th th:text="#{object.order.employee}">Employee</th>
             <th th:text="#{object.order.amount}">Amount</th>
-            <th th:text="#{object.operation}">Actions</th>
+            <th th:if="${tab != 'delivered'}" th:text="#{object.operation}">Actions</th>
         </tr>
         </thead>
         <tbody>
@@ -29,17 +41,23 @@
             <td th:text="${order.clientName}"></td>
             <td th:text="${order.employeeName}"></td>
             <td th:text="${order.totalAmount}"></td>
-            <td>
+            <td th:if="${tab == 'pending'}">
                 <form th:action="@{/deliveries/{id}/confirm(id=${order.id})}" method="post">
                     <input type="hidden" name="_method" value="patch"/>
                     <button type="submit" class="btn btn-sm btn-success">Confirm Delivery</button>
+                </form>
+            </td>
+            <td th:if="${tab == 'delivering'}">
+                <form th:action="@{/deliveries/{id}/deliver(id=${order.id})}" method="post">
+                    <input type="hidden" name="_method" value="patch"/>
+                    <button type="submit" class="btn btn-sm btn-primary" th:text="#{deliveries.btn.deliver}"></button>
                 </form>
             </td>
         </tr>
         </tbody>
     </table>
 
-    <p th:if="${#lists.isEmpty(orders)}" class="text-muted">No orders pending delivery.</p>
+    <p th:if="${#lists.isEmpty(orders)}" class="text-muted">No orders in this view.</p>
 </main>
 <div th:insert="~{footer::footer}"></div>
 </body>

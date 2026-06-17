@@ -13,22 +13,45 @@
 </header>
 <main class="container mt-3">
     <h1>Order #<span th:text="${orderId}"></span></h1>
+    <p class="text-muted" th:if="${order.createdAt != null}">
+        <span th:text="#{object.order.created}"></span>: <span th:text="${#temporals.format(order.createdAt, 'yyyy-MM-dd HH:mm')}"></span>
+    </p>
 
     <div th:classappend="${order.status.name() == 'DRAFT'} ? 'alert alert-secondary'
                         : (${order.status.name() == 'PENDING_EMPLOYEE'} ? 'alert alert-secondary'
                         : (${order.status.name() == 'PENDING_CLIENT'} ? 'alert alert-warning'
                         : (${order.status.name() == 'PENDING_DELIVERY'} ? 'alert alert-primary'
                         : (${order.status.name() == 'DELIVERING'} ? 'alert alert-success'
-                        : 'alert alert-light'))))" class="mb-3">
+                        : (${order.status.name() == 'DELIVERED'} ? 'alert alert-dark'
+                        : 'alert alert-light')))))" class="mb-3">
         <strong th:text="#{|order.status.client.${order.status}|}"></strong>
         <span class="mx-2">—</span>
         <span th:text="#{|my.orders.hint.${order.status}|}"></span>
+    </div>
+
+    <div class="mb-3" th:if="${priceChanges != null and !priceChanges.isEmpty()}">
+        <div class="alert alert-warning">
+            <strong th:text="#{my.orders.price.changed.title}"></strong>
+            <ul class="mb-0">
+                <li th:each="change : ${priceChanges}">
+                    <span th:text="${change.applianceName}"></span>:
+                    <span th:text="${change.oldAmount}"></span> → <span th:text="${change.newAmount}"></span>
+                </li>
+            </ul>
+        </div>
     </div>
 
     <div class="mb-3" th:if="${order.employeeNote != null and !order.employeeNote.isEmpty()}">
         <div class="alert alert-info">
             <strong th:text="#{object.order.note}">Employee note:</strong>
             <span th:text="${order.employeeNote}"></span>
+        </div>
+    </div>
+
+    <div class="mb-3" th:if="${order.status.name() == 'CANCELLED'}">
+        <div class="alert alert-secondary">
+            <div><strong th:text="#{object.order.cancel.reason}"></strong>: <span th:text="${order.cancelReason}"></span></div>
+            <div><strong th:text="#{object.order.cancelled.at}"></strong>: <span th:text="${#temporals.format(order.cancelledAt, 'yyyy-MM-dd HH:mm')}"></span></div>
         </div>
     </div>
 
@@ -76,12 +99,21 @@
             <button type="submit" class="btn btn-primary" th:text="#{my.orders.btn.resubmit}"></button>
         </form>
 
-        <form th:unless="${order.status.name() == 'DELIVERING'}"
-              th:action="@{/my-orders/{id}/cancel(id=${orderId})}" method="post">
-            <input type="hidden" name="_method" value="patch"/>
-            <button type="submit" class="btn btn-warning" th:text="#{my.orders.btn.cancel}"></button>
-        </form>
         <a th:href="@{/my-orders}" class="btn btn-outline-secondary">Back</a>
+    </div>
+
+    <div th:if="${order.status.name() != 'DELIVERING' and order.status.name() != 'DELIVERED' and order.status.name() != 'CANCELLED'}" class="card mt-3">
+        <div class="card-header fw-semibold" th:text="#{my.orders.btn.cancel}"></div>
+        <div class="card-body">
+            <form th:action="@{/my-orders/{id}/cancel(id=${orderId})}" method="post">
+                <input type="hidden" name="_method" value="patch"/>
+                <div class="mb-3">
+                    <label class="form-label" th:text="#{object.order.cancel.reason}"></label>
+                    <textarea name="reason" class="form-control" rows="2" required th:placeholder="#{my.orders.cancel.reason.prompt}"></textarea>
+                </div>
+                <button type="submit" class="btn btn-warning" th:text="#{my.orders.btn.cancel}"></button>
+            </form>
+        </div>
     </div>
 </main>
 <div th:insert="~{footer::footer}"></div>

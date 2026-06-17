@@ -1,5 +1,7 @@
 package com.epam.rd.autocode.assessment.appliances.controller;
 
+import com.epam.rd.autocode.assessment.appliances.dto.OrderResponseDTO;
+import com.epam.rd.autocode.assessment.appliances.dto.OrderRowPriceChangeDTO;
 import com.epam.rd.autocode.assessment.appliances.service.ApplianceService;
 import com.epam.rd.autocode.assessment.appliances.service.OrderService;
 import lombok.AllArgsConstructor;
@@ -11,8 +13,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @AllArgsConstructor
 @Controller
@@ -22,16 +26,20 @@ public class MyOrdersController {
     private final ApplianceService applianceService;
 
     @GetMapping("")
-    public String myOrders(@PageableDefault(sort = "id", direction = Sort.Direction.ASC) Pageable pageable,
+    public String myOrders(@RequestParam(defaultValue = "false") boolean cancelled,
+                           @PageableDefault(sort = "id", direction = Sort.Direction.ASC) Pageable pageable,
                            Model model, Authentication authentication) {
         Sort.Order sort = pageable.getSort().iterator().next();
-        Page<?> page = orderService.findByClientEmail(authentication.getName(), pageable);
+        Page<OrderResponseDTO> page = cancelled
+                ? orderService.findCancelledByClientEmail(authentication.getName(), pageable)
+                : orderService.findByClientEmail(authentication.getName(), pageable);
         model.addAttribute("orders", page.getContent());
         model.addAttribute("currentPage", page.getNumber());
         model.addAttribute("totalPages", page.getTotalPages());
         model.addAttribute("pageSize", page.getSize());
         model.addAttribute("sortField", sort.getProperty());
         model.addAttribute("sortDir", sort.getDirection().name().toLowerCase());
+        model.addAttribute("cancelled", cancelled);
         return "my-orders/myOrders";
     }
 
@@ -72,14 +80,24 @@ public class MyOrdersController {
     }
 
     @PatchMapping("/{id}/submit")
-    public String submitForReview(@PathVariable Long id) {
-        orderService.submitForReview(id);
-        return "redirect:/my-orders";
+    public String submitForReview(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        List<OrderRowPriceChangeDTO> priceChanges = orderService.submitForReview(id);
+        if (!priceChanges.isEmpty()) {
+            redirectAttributes.addFlashAttribute("priceChanges", priceChanges);
+        }
+        return "redirect:/my-orders/" + id + "/edit";
+    }
+
+    @GetMapping("/{id}/cancel")
+    public String cancelOrderForm(@PathVariable Long id, Model model) {
+        model.addAttribute("order", orderService.findResponseById(id));
+        model.addAttribute("orderId", id);
+        return "my-orders/cancelOrder";
     }
 
     @PatchMapping("/{id}/cancel")
-    public String cancelOrder(@PathVariable Long id) {
-        orderService.cancelOrder(id);
+    public String cancelOrder(@PathVariable Long id, @RequestParam String reason, Authentication authentication) {
+        orderService.cancelOrder(id, reason, authentication.getName());
         return "redirect:/my-orders";
     }
 

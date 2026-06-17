@@ -5,9 +5,11 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -38,4 +40,11 @@ public class Orders {
     private OrderStatus status = OrderStatus.PENDING_EMPLOYEE;
 
     private String employeeNote;
+
+    @CreationTimestamp
+    private LocalDateTime createdAt;
+
+    private String cancelReason;
+    private LocalDateTime cancelledAt;
+    private String cancelledBy;
 }

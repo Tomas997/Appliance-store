@@ -6,5 +6,6 @@ public enum OrderStatus {
     PENDING_CLIENT,
     PENDING_DELIVERY,
     DELIVERING,
+    DELIVERED,
     CANCELLED
 }

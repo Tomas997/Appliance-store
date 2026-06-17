@@ -30,15 +30,17 @@ public class OrdersController {
     private final ApplianceService applianceService;
 
     @GetMapping("")
-    public String orders(@PageableDefault(sort = "id", direction = Sort.Direction.ASC) Pageable pageable, Model model) {
+    public String orders(@RequestParam(defaultValue = "false") boolean cancelled,
+                         @PageableDefault(sort = "id", direction = Sort.Direction.ASC) Pageable pageable, Model model) {
         Sort.Order order = pageable.getSort().iterator().next();
-        Page<OrderResponseDTO> orders = orderService.findAll(pageable);
+        Page<OrderResponseDTO> orders = cancelled ? orderService.findCancelled(pageable) : orderService.findAll(pageable);
         model.addAttribute("orders", orders.getContent());
         model.addAttribute("currentPage", orders.getNumber());
         model.addAttribute("totalPages", orders.getTotalPages());
         model.addAttribute("pageSize", orders.getSize());
         model.addAttribute("sortField", order.getProperty());
         model.addAttribute("sortDir", order.getDirection().name().toLowerCase());
+        model.addAttribute("cancelled", cancelled);
         return "order/orders";
     }
 
@@ -102,6 +104,21 @@ public class OrdersController {
                                   @RequestParam String note,
                                   Authentication authentication) {
         orderService.requestRevision(id, note, authentication.getName());
+        return "redirect:/orders";
+    }
+
+    @GetMapping("/{id}/cancel")
+    public String cancelOrderForm(@PathVariable Long id, Model model) {
+        model.addAttribute("orderInfo", orderService.findResponseById(id));
+        model.addAttribute("orderId", id);
+        return "order/cancelOrder";
+    }
+
+    @PatchMapping("/{id}/cancel")
+    public String cancelOrder(@PathVariable Long id,
+                              @RequestParam String reason,
+                              Authentication authentication) {
+        orderService.cancelOrder(id, reason, authentication.getName());
         return "redirect:/orders";
     }
 

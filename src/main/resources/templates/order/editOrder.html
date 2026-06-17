@@ -12,8 +12,17 @@
     <div th:insert="~{menunavy::navy}"></div>
 </header>
 <main class="container mt-3"
-      th:with="isLocked=${orderInfo.status.name() == 'PENDING_DELIVERY' or orderInfo.status.name() == 'DELIVERING'}">
+      th:with="isLocked=${orderInfo.status.name() == 'PENDING_DELIVERY' or orderInfo.status.name() == 'DELIVERING' or orderInfo.status.name() == 'DELIVERED' or orderInfo.status.name() == 'CANCELLED'},
+               isCancellable=${orderInfo.status.name() != 'DELIVERING' and orderInfo.status.name() != 'DELIVERED' and orderInfo.status.name() != 'CANCELLED'}">
 <h1>Edit Order</h1>
+<p class="text-muted" th:if="${orderInfo.createdAt != null}">
+    <span th:text="#{object.order.created}"></span>: <span th:text="${#temporals.format(orderInfo.createdAt, 'yyyy-MM-dd HH:mm')}"></span>
+</p>
+<div th:if="${orderInfo.status.name() == 'CANCELLED'}" class="alert alert-secondary">
+    <div><strong th:text="#{object.order.cancel.reason}"></strong>: <span th:text="${orderInfo.cancelReason}"></span></div>
+    <div><strong th:text="#{object.order.cancelled.by}"></strong>: <span th:text="${orderInfo.cancelledBy}"></span></div>
+    <div><strong th:text="#{object.order.cancelled.at}"></strong>: <span th:text="${#temporals.format(orderInfo.cancelledAt, 'yyyy-MM-dd HH:mm')}"></span></div>
+</div>
 <form th:unless="${isLocked}" action="#" th:action="@{/orders/{id}/edit(id=${orderId})}" th:object="${order}" method="post">
     <input type="hidden" name="_method" value="PUT"/>
     <div class="mb-3">
@@ -42,6 +51,20 @@
         <p class="form-control-plaintext fw-semibold" th:text="${orderInfo.employeeName}"></p>
     </div>
     <a th:href="@{/orders}" class="btn btn-secondary">Back</a>
+</div>
+
+<div th:if="${isCancellable}" class="card mt-3">
+    <div class="card-header fw-semibold" th:text="#{orders.btn.cancel}"></div>
+    <div class="card-body">
+        <form th:action="@{/orders/{id}/cancel(id=${orderId})}" method="post">
+            <input type="hidden" name="_method" value="patch"/>
+            <div class="mb-3">
+                <label class="form-label" th:text="#{object.order.cancel.reason}"></label>
+                <textarea name="reason" class="form-control" rows="2" required th:placeholder="#{orders.cancel.reason.prompt}"></textarea>
+            </div>
+            <button type="submit" class="btn btn-outline-danger" th:text="#{orders.btn.cancel}"></button>
+        </form>
+    </div>
 </div>
 
 <h2>Order rows</h2>
@@ -79,39 +102,26 @@
 <div th:if="${orderInfo.status.name() == 'PENDING_EMPLOYEE'}" class="card mt-4">
     <div class="card-header fw-semibold" th:text="#{orders.review.section}"></div>
     <div class="card-body">
-        <div class="mb-3">
-            <label class="form-label" th:text="#{object.order.note}"></label>
-            <textarea id="review-note" class="form-control" rows="2"
-                      th:placeholder="#{orders.review.note.placeholder}"></textarea>
-        </div>
-        <div class="d-flex gap-2">
-            <form th:action="@{/orders/{id}/employee-approve(id=${orderId})}" method="post" id="approve-form">
+        <div class="d-flex gap-2 flex-wrap">
+            <form th:action="@{/orders/{id}/employee-approve(id=${orderId})}" method="post" class="flex-fill">
+                <div class="mb-2">
+                    <label class="form-label" th:text="#{object.order.note}"></label>
+                    <textarea name="note" class="form-control" rows="2" th:placeholder="#{orders.review.note.placeholder}"></textarea>
+                </div>
                 <input type="hidden" name="_method" value="patch"/>
-                <input type="hidden" name="note" id="approve-note"/>
-                <button type="button" class="btn btn-success" onclick="submitReview('approve')"
-                        th:text="#{orders.btn.approve}"></button>
+                <button type="submit" class="btn btn-success" th:text="#{orders.btn.approve}"></button>
             </form>
-            <form th:action="@{/orders/{id}/employee-revision(id=${orderId})}" method="post" id="revision-form">
+            <form th:action="@{/orders/{id}/employee-revision(id=${orderId})}" method="post" class="flex-fill">
+                <div class="mb-2">
+                    <label class="form-label" th:text="#{object.order.note}"></label>
+                    <textarea name="note" class="form-control" rows="2" required th:placeholder="#{orders.review.note.placeholder}"></textarea>
+                </div>
                 <input type="hidden" name="_method" value="patch"/>
-                <input type="hidden" name="note" id="revision-note"/>
-                <button type="button" class="btn btn-warning" onclick="submitReview('revision')"
-                        th:text="#{orders.btn.revision}"></button>
+                <button type="submit" class="btn btn-warning" th:text="#{orders.btn.revision}"></button>
             </form>
         </div>
     </div>
 </div>
-
-<script th:inline="javascript">
-function submitReview(action) {
-    var note = document.getElementById('review-note').value.trim();
-    if (action === 'revision' && !note) {
-        alert([[#{orders.review.note.required}]]);
-        return;
-    }
-    document.getElementById(action + '-note').value = note;
-    document.getElementById(action + '-form').submit();
-}
-</script>
 
 </main>
 <div th:insert="~{footer::footer}"></div>

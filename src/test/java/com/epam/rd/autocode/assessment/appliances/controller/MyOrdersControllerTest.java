@@ -2,6 +2,7 @@ package com.epam.rd.autocode.assessment.appliances.controller;
 
 import com.epam.rd.autocode.assessment.appliances.dto.ApplianceResponseDTO;
 import com.epam.rd.autocode.assessment.appliances.dto.OrderResponseDTO;
+import com.epam.rd.autocode.assessment.appliances.dto.OrderRowPriceChangeDTO;
 import com.epam.rd.autocode.assessment.appliances.model.OrderStatus;
 import com.epam.rd.autocode.assessment.appliances.service.ApplianceService;
 import com.epam.rd.autocode.assessment.appliances.service.OrderService;
@@ -58,7 +59,7 @@ class MyOrdersControllerTest {
     @DisplayName("GET /my-orders: повинен повернути сторінку зі списком замовлень клієнта та атрибутами пагінації")
     void getMyOrders_shouldReturnMyOrdersViewWithPaginationAttributes() throws Exception {
         OrderResponseDTO dto = new OrderResponseDTO(1L, "Employee", "Client", "Deliverer",
-                OrderStatus.DRAFT, "note", BigDecimal.TEN);
+                OrderStatus.DRAFT, "note", BigDecimal.TEN, null, null, null, null);
         Page<OrderResponseDTO> page = new PageImpl<>(
                 List.of(dto),
                 PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "id")),
@@ -94,6 +95,21 @@ class MyOrdersControllerTest {
     }
 
     @Test
+    @DisplayName("GET /my-orders?cancelled=true: повинен показати скасовані замовлення клієнта")
+    void getMyOrders_cancelled_shouldUseFindCancelledByClientEmail() throws Exception {
+        when(orderService.findCancelledByClientEmail(eq("client@store.com"), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        mockMvc.perform(get("/my-orders").principal(principal).param("cancelled", "true"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("my-orders/myOrders"))
+                .andExpect(model().attribute("cancelled", true));
+
+        verify(orderService).findCancelledByClientEmail(eq("client@store.com"), any(Pageable.class));
+        verify(orderService, never()).findByClientEmail(any(), any());
+    }
+
+    @Test
     @DisplayName("POST /my-orders/create: повинен створити замовлення клієнта та перенаправити на редагування")
     void createOrder_shouldCreateOrderAndRedirectToEdit() throws Exception {
         when(orderService.createClientOrder("client@store.com")).thenReturn(7L);
@@ -109,7 +125,7 @@ class MyOrdersControllerTest {
     @DisplayName("GET /my-orders/{id}/edit: повинен повернути форму редагування замовлення клієнта")
     void getEditMyOrderForm_shouldReturnEditViewWithOrderData() throws Exception {
         OrderResponseDTO responseDTO = new OrderResponseDTO(1L, "Employee", "Client", "Deliverer",
-                OrderStatus.DRAFT, "note", BigDecimal.TEN);
+                OrderStatus.DRAFT, "note", BigDecimal.TEN, null, null, null, null);
         when(orderService.findResponseById(1L)).thenReturn(responseDTO);
         when(orderService.getOrderRows(1L)).thenReturn(Set.of());
 
@@ -162,23 +178,55 @@ class MyOrdersControllerTest {
     }
 
     @Test
-    @DisplayName("PATCH /my-orders/{id}/submit: повинен надіслати замовлення на розгляд та перенаправити на список")
+    @DisplayName("PATCH /my-orders/{id}/submit: повинен надіслати замовлення на розгляд та перенаправити на сторінку замовлення")
     void submitForReview_shouldSubmitAndRedirect() throws Exception {
+        when(orderService.submitForReview(1L)).thenReturn(List.of());
+
         mockMvc.perform(patch("/my-orders/{id}/submit", 1L))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/my-orders"));
+                .andExpect(redirectedUrl("/my-orders/1/edit"));
 
         verify(orderService).submitForReview(1L);
     }
 
     @Test
-    @DisplayName("PATCH /my-orders/{id}/cancel: повинен скасувати замовлення та перенаправити на список")
+    @DisplayName("PATCH /my-orders/{id}/submit: якщо ціна змінилась — повинен передати попередження через flash-атрибут")
+    void submitForReview_whenPriceChanged_shouldAddFlashAttribute() throws Exception {
+        OrderRowPriceChangeDTO change = new OrderRowPriceChangeDTO("Appliance", BigDecimal.TEN, BigDecimal.valueOf(20));
+        when(orderService.submitForReview(1L)).thenReturn(List.of(change));
+
+        mockMvc.perform(patch("/my-orders/{id}/submit", 1L))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/my-orders/1/edit"))
+                .andExpect(flash().attributeExists("priceChanges"));
+
+        verify(orderService).submitForReview(1L);
+    }
+
+    @Test
+    @DisplayName("GET /my-orders/{id}/cancel: повинен повернути сторінку підтвердження скасування")
+    void cancelOrderForm_shouldReturnCancelOrderView() throws Exception {
+        OrderResponseDTO responseDTO = new OrderResponseDTO(1L, "Employee", "Client", "Deliverer",
+                OrderStatus.DRAFT, "note", BigDecimal.TEN, null, null, null, null);
+        when(orderService.findResponseById(1L)).thenReturn(responseDTO);
+
+        mockMvc.perform(get("/my-orders/{id}/cancel", 1L))
+                .andExpect(status().isOk())
+                .andExpect(view().name("my-orders/cancelOrder"))
+                .andExpect(model().attribute("order", responseDTO))
+                .andExpect(model().attribute("orderId", 1L));
+    }
+
+    @Test
+    @DisplayName("PATCH /my-orders/{id}/cancel: повинен скасувати замовлення з причиною та перенаправити на список")
     void cancelOrder_shouldCancelAndRedirect() throws Exception {
-        mockMvc.perform(patch("/my-orders/{id}/cancel", 1L))
+        mockMvc.perform(patch("/my-orders/{id}/cancel", 1L)
+                        .principal(principal)
+                        .param("reason", "Found a better deal"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/my-orders"));
 
-        verify(orderService).cancelOrder(1L);
+        verify(orderService).cancelOrder(1L, "Found a better deal", "client@store.com");
     }
 
     @Test

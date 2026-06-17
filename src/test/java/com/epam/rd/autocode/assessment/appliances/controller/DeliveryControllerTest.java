@@ -48,7 +48,7 @@ class DeliveryControllerTest {
     @DisplayName("GET /deliveries: повинен повернути сторінку зі списком замовлень для доставки та атрибутами пагінації")
     void getDeliveries_shouldReturnDeliveriesViewWithPaginationAttributes() throws Exception {
         OrderResponseDTO dto = new OrderResponseDTO(1L, "Employee", "Client", "Deliverer",
-                OrderStatus.PENDING_DELIVERY, "note", BigDecimal.TEN);
+                OrderStatus.PENDING_DELIVERY, "note", BigDecimal.TEN, null, null, null, null);
         Page<OrderResponseDTO> page = new PageImpl<>(
                 List.of(dto),
                 PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "id")),
@@ -90,5 +90,46 @@ class DeliveryControllerTest {
                 .andExpect(redirectedUrl("/deliveries"));
 
         verify(orderService).acceptByDeliverer(1L, "deliverer@store.com");
+    }
+
+    @Test
+    @DisplayName("GET /deliveries?tab=delivering: повинен показати замовлення в дорозі")
+    void getDeliveries_delivering_shouldUseFindDelivering() throws Exception {
+        when(orderService.findDelivering(any(Pageable.class))).thenReturn(new PageImpl<>(List.of()));
+
+        mockMvc.perform(get("/deliveries").param("tab", "delivering"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("delivery/deliveries"))
+                .andExpect(model().attribute("tab", "delivering"));
+
+        verify(orderService).findDelivering(any(Pageable.class));
+        verify(orderService, never()).findPendingForDelivery(any(Pageable.class));
+    }
+
+    @Test
+    @DisplayName("GET /deliveries?tab=delivered: повинен показати доставлені замовлення")
+    void getDeliveries_delivered_shouldUseFindDelivered() throws Exception {
+        when(orderService.findDelivered(any(Pageable.class))).thenReturn(new PageImpl<>(List.of()));
+
+        mockMvc.perform(get("/deliveries").param("tab", "delivered"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("delivery/deliveries"))
+                .andExpect(model().attribute("tab", "delivered"));
+
+        verify(orderService).findDelivered(any(Pageable.class));
+        verify(orderService, never()).findPendingForDelivery(any(Pageable.class));
+    }
+
+    @Test
+    @DisplayName("PATCH /deliveries/{id}/deliver: повинен позначити замовлення доставленим та перенаправити на вкладку 'в дорозі'")
+    void markDelivered_shouldMarkWithUsernameAndRedirect() throws Exception {
+        UsernamePasswordAuthenticationToken principal =
+                new UsernamePasswordAuthenticationToken("deliverer@store.com", null);
+
+        mockMvc.perform(patch("/deliveries/{id}/deliver", 1L).principal(principal))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/deliveries?tab=delivering"));
+
+        verify(orderService).markAsDelivered(1L, "deliverer@store.com");
     }
 }

@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -20,4 +21,8 @@ public class OrderResponseDTO {
     private OrderStatus status;
     private String employeeNote;
     private BigDecimal totalAmount;
+    private LocalDateTime createdAt;
+    private String cancelReason;
+    private LocalDateTime cancelledAt;
+    private String cancelledBy;
 }
