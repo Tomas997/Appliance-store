@@ -12,11 +12,11 @@
 <main class="container mt-5" style="max-width: 420px;">
     <h2 class="mb-4 text-center">Sign In</h2>
 
-    <div th:if="${param.error}" class="alert alert-danger" role="alert">
-        Invalid email or password.
+    <div th:if="${param.error}" class="alert alert-danger" role="alert" th:text="#{login.error}">
     </div>
-    <div th:if="${param.logout}" class="alert alert-success" role="alert">
-        You have been logged out successfully.
+    <div th:if="${param.logout}" class="alert alert-success" role="alert" th:text="#{login.logout}">
+    </div>
+    <div th:if="${param.expired}" class="alert alert-warning" role="alert" th:text="#{login.expired}">
     </div>
 
     <form th:action="@{/login}" method="post">

@@ -24,6 +24,7 @@ import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
 import org.springframework.security.web.authentication.logout.SimpleUrlLogoutSuccessHandler;
+import org.springframework.security.web.session.HttpSessionEventPublisher;
 
 import java.util.List;
 
@@ -72,6 +73,11 @@ public class SecurityConfig {
     }
 
     @Bean
+    public HttpSessionEventPublisher httpSessionEventPublisher() {
+        return new HttpSessionEventPublisher();
+    }
+
+    @Bean
     public LogoutSuccessHandler logoutSuccessHandler() {
         SimpleUrlLogoutSuccessHandler delegate = new SimpleUrlLogoutSuccessHandler();
         delegate.setDefaultTargetUrl("/login?logout=true");
@@ -102,6 +108,11 @@ public class SecurityConfig {
             )
             .csrf(csrf -> csrf.ignoringRequestMatchers("/h2-console/**"))
             .headers(h -> h.frameOptions(f -> f.sameOrigin()))
+            .sessionManagement(session -> session
+                .maximumSessions(1)
+                .maxSessionsPreventsLogin(false)
+                .expiredUrl("/login?expired=true")
+            )
             .formLogin(form -> form
                 .loginPage("/login")
                 .usernameParameter("email")
