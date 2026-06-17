@@ -1,5 +1,6 @@
 package com.epam.rd.autocode.assessment.appliances.service.impl;
 
+import com.epam.rd.autocode.assessment.appliances.aspect.Loggable;
 import com.epam.rd.autocode.assessment.appliances.dto.ApplianceRequestDTO;
 import com.epam.rd.autocode.assessment.appliances.dto.ApplianceResponseDTO;
 import com.epam.rd.autocode.assessment.appliances.model.Appliance;
@@ -36,6 +37,7 @@ public class ApplianceServiceImpl implements ApplianceService {
     }
 
     @Override
+    @Loggable
     public void saveAppliance(ApplianceRequestDTO dto) {
         applianceRepository.save(toEntity(dto));
     }
@@ -50,6 +52,7 @@ public class ApplianceServiceImpl implements ApplianceService {
     }
 
     @Override
+    @Loggable
     public void updateAppliance(Long id, ApplianceRequestDTO dto) {
         Appliance appliance = applianceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Appliance", id));
@@ -60,6 +63,7 @@ public class ApplianceServiceImpl implements ApplianceService {
     }
 
     @Override
+    @Loggable
     public void deleteApplianceById(Long id) {
         applianceRepository.deleteById(id);
     }

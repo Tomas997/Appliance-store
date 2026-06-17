@@ -1,5 +1,6 @@
 package com.epam.rd.autocode.assessment.appliances.service.impl;
 
+import com.epam.rd.autocode.assessment.appliances.aspect.Loggable;
 import com.epam.rd.autocode.assessment.appliances.dto.DelivererRequestDTO;
 import com.epam.rd.autocode.assessment.appliances.dto.DelivererResponseDTO;
 import com.epam.rd.autocode.assessment.appliances.dto.DelivererUpdateDTO;
@@ -34,6 +35,7 @@ public class DelivererServiceImpl implements DelivererService {
     }
 
     @Override
+    @Loggable
     public void saveDeliverer(DelivererRequestDTO dto) {
         Deliverer deliverer = new Deliverer();
         deliverer.setName(dto.getName());
@@ -53,6 +55,7 @@ public class DelivererServiceImpl implements DelivererService {
     }
 
     @Override
+    @Loggable
     public void updateDeliverer(Long id, DelivererUpdateDTO dto) {
         Deliverer deliverer = delivererRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Deliverer", id));
@@ -65,6 +68,7 @@ public class DelivererServiceImpl implements DelivererService {
     }
 
     @Override
+    @Loggable
     public void deleteDelivererById(Long id) {
         delivererRepository.deleteById(id);
     }

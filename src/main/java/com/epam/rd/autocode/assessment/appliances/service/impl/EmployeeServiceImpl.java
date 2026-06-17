@@ -1,5 +1,6 @@
 package com.epam.rd.autocode.assessment.appliances.service.impl;
 
+import com.epam.rd.autocode.assessment.appliances.aspect.Loggable;
 import com.epam.rd.autocode.assessment.appliances.dto.ClientResponseDTO;
 import com.epam.rd.autocode.assessment.appliances.dto.EmployeeRequestDTO;
 import com.epam.rd.autocode.assessment.appliances.dto.EmployeeResponseDTO;
@@ -38,6 +39,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
     @Override
+    @Loggable
     @PreAuthorize("hasRole('ADMIN')")
     public void saveEmployee(EmployeeRequestDTO dto) {
         Employee employee = toEntity(dto);
@@ -53,6 +55,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
     @Override
+    @Loggable
     @PreAuthorize("hasRole('ADMIN')")
     public void updateEmployee(Long id, EmployeeRequestDTO dto) {
         Employee employee = employeeRepository.findById(id)
@@ -67,6 +70,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
     @Override
+    @Loggable
     @PreAuthorize("hasRole('ADMIN')")
     public void deleteEmployeeById(Long id) {
         employeeRepository.deleteById(id);

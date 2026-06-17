@@ -1,5 +1,6 @@
 package com.epam.rd.autocode.assessment.appliances.service.impl;
 
+import com.epam.rd.autocode.assessment.appliances.aspect.Loggable;
 import com.epam.rd.autocode.assessment.appliances.dto.ClientRequestDTO;
 import com.epam.rd.autocode.assessment.appliances.dto.ClientResponseDTO;
 import com.epam.rd.autocode.assessment.appliances.dto.ClientUpdateDTO;
@@ -28,6 +29,7 @@ public class ClientServiceImpl implements ClientService {
     private final ModelMapper modelMapper;
 
     @Override
+    @Loggable
     public void saveClient(ClientRequestDTO clientDto) {
         Client client = toEntity(clientDto);
         client.setPassword(passwordEncoder.encode(clientDto.getPassword()));
@@ -55,6 +57,7 @@ public class ClientServiceImpl implements ClientService {
     }
 
     @Override
+    @Loggable
     public void updateClient(Long id, ClientUpdateDTO clientDto) {
         Client client = clientRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Client", id));
@@ -68,6 +71,7 @@ public class ClientServiceImpl implements ClientService {
     }
 
     @Override
+    @Loggable
     @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
     public void deleteClientById(Long clientId) {
         clientRepository.deleteById(clientId);

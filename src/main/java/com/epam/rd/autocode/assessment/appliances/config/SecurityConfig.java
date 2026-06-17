@@ -2,12 +2,17 @@ package com.epam.rd.autocode.assessment.appliances.config;
 
 import com.epam.rd.autocode.assessment.appliances.service.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.DefaultAuthenticationEventPublisher;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.authorization.AuthorizationEventPublisher;
+import org.springframework.security.authorization.SpringAuthorizationEventPublisher;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -17,6 +22,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
+import org.springframework.security.web.authentication.logout.SimpleUrlLogoutSuccessHandler;
 
 import java.util.List;
 
@@ -24,6 +31,7 @@ import java.util.List;
 @EnableWebSecurity
 @EnableMethodSecurity
 @RequiredArgsConstructor
+@Slf4j
 public class SecurityConfig {
 
     private final CustomUserDetailsService customUserDetailsService;
@@ -44,7 +52,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager() {
+    public AuthenticationManager authenticationManager(ApplicationEventPublisher eventPublisher) {
         DaoAuthenticationProvider dbProvider = new DaoAuthenticationProvider();
         dbProvider.setUserDetailsService(customUserDetailsService);
         dbProvider.setPasswordEncoder(passwordEncoder());
@@ -53,7 +61,25 @@ public class SecurityConfig {
         inMemoryProvider.setUserDetailsService(inMemoryUserDetailsManager());
         inMemoryProvider.setPasswordEncoder(passwordEncoder());
 
-        return new ProviderManager(List.of(dbProvider, inMemoryProvider));
+        ProviderManager providerManager = new ProviderManager(List.of(dbProvider, inMemoryProvider));
+        providerManager.setAuthenticationEventPublisher(new DefaultAuthenticationEventPublisher(eventPublisher));
+        return providerManager;
+    }
+
+    @Bean
+    public AuthorizationEventPublisher authorizationEventPublisher(ApplicationEventPublisher eventPublisher) {
+        return new SpringAuthorizationEventPublisher(eventPublisher);
+    }
+
+    @Bean
+    public LogoutSuccessHandler logoutSuccessHandler() {
+        SimpleUrlLogoutSuccessHandler delegate = new SimpleUrlLogoutSuccessHandler();
+        delegate.setDefaultTargetUrl("/login?logout=true");
+        return (request, response, authentication) -> {
+            String username = authentication != null ? authentication.getName() : "anonymous";
+            log.info("Logout: {}", username);
+            delegate.onLogoutSuccess(request, response, authentication);
+        };
     }
 
     @Bean
@@ -84,7 +110,7 @@ public class SecurityConfig {
                 .permitAll()
             )
             .logout(logout -> logout
-                .logoutSuccessUrl("/login?logout=true")
+                .logoutSuccessHandler(logoutSuccessHandler())
                 .invalidateHttpSession(true)
                 .deleteCookies("JSESSIONID")
                 .permitAll()

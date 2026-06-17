@@ -1,5 +1,6 @@
 package com.epam.rd.autocode.assessment.appliances.service.impl;
 
+import com.epam.rd.autocode.assessment.appliances.aspect.Loggable;
 import com.epam.rd.autocode.assessment.appliances.dto.ManufacturerRequestDTO;
 import com.epam.rd.autocode.assessment.appliances.dto.ManufacturerResponseDTO;
 import com.epam.rd.autocode.assessment.appliances.model.Manufacturer;
@@ -34,6 +35,7 @@ public class ManufacturerServiceImpl implements ManufacturerService {
     }
 
     @Override
+    @Loggable
     public void saveManufacturer(ManufacturerRequestDTO dto) {
         manufacturerRepository.save(toEntity(dto));
     }
@@ -46,6 +48,7 @@ public class ManufacturerServiceImpl implements ManufacturerService {
     }
 
     @Override
+    @Loggable
     public void updateManufacturer(Long id, ManufacturerRequestDTO dto) {
         Manufacturer manufacturer = manufacturerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Manufacturer", id));
@@ -54,6 +57,7 @@ public class ManufacturerServiceImpl implements ManufacturerService {
     }
 
     @Override
+    @Loggable
     public void deleteManufacturerById(Long id) {
         manufacturerRepository.deleteById(id);
     }
