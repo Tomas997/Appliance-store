@@ -20,6 +20,7 @@
     <p>
         <span th:text="#{object.order.employee}"></span>
         <select th:field="*{employeeId}">
+            <option value="" th:text="'— not assigned —'"></option>
             <option th:each="employee : ${employees}" th:value="${employee.id}" th:text="${employee.name}"></option>
         </select>
         <span th:if="${#fields.hasErrors('employeeId')}" th:errors="*{employeeId}" class="text-danger"></span>

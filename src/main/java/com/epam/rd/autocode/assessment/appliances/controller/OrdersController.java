@@ -12,14 +12,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.bind.annotation.RequestParam;
 
 import java.math.BigDecimal;
-import java.util.List;
 
 @AllArgsConstructor
 @Controller
@@ -64,15 +63,16 @@ public class OrdersController {
     @GetMapping("/{id}/edit")
     public String editOrderForm(@PathVariable Long id, Model model) {
         model.addAttribute("order", orderService.findById(id));
+        model.addAttribute("orderInfo", orderService.findResponseById(id));
         model.addAttribute("orderId", id);
         model.addAttribute("rows", orderService.getOrderRows(id));
-        addFormData(model);
+        model.addAttribute("employees", employeeService.findAll());
         return "order/editOrder";
     }
 
     @PutMapping("/{id}/edit")
     public String editOrder(@PathVariable Long id,
-                            @Valid @ModelAttribute("order") OrderRequestDTO order,
+                            @ModelAttribute("order") OrderRequestDTO order,
                             BindingResult result, Model model) {
         if (result.hasErrors()) {
             model.addAttribute("orderId", id);
@@ -89,15 +89,19 @@ public class OrdersController {
         return "redirect:/orders";
     }
 
-    @PatchMapping("/{id}/approved")
-    public String approveOrder(@PathVariable Long id) {
-        orderService.approveOrder(id, true);
+    @PatchMapping("/{id}/employee-approve")
+    public String approveByEmployee(@PathVariable Long id,
+                                    @RequestParam(required = false) String note,
+                                    Authentication authentication) {
+        orderService.approveByEmployee(id, note, authentication.getName());
         return "redirect:/orders";
     }
 
-    @PatchMapping("/{id}/unapproved")
-    public String unapproveOrder(@PathVariable Long id) {
-        orderService.approveOrder(id, false);
+    @PatchMapping("/{id}/employee-revision")
+    public String requestRevision(@PathVariable Long id,
+                                  @RequestParam String note,
+                                  Authentication authentication) {
+        orderService.requestRevision(id, note, authentication.getName());
         return "redirect:/orders";
     }
 

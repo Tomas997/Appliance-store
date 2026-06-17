@@ -2,12 +2,8 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <!-- Latest compiled and minified CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- Latest compiled JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link th:href="@{/styles/css/main.css}" rel="stylesheet"/>
     <script th:src="@{/js/pagination.js}"></script>
@@ -17,7 +13,7 @@
 <header>
     <div th:insert="~{menunavy::navy}"></div>
 </header>
-<main>
+<main class="container mt-3">
     <h1 th:text="#{orders.header.list}">Orders list</h1>
     <table class="table table-hover">
         <thead>
@@ -25,41 +21,35 @@
             <th th:replace="~{fragments/table-fragments :: sortHeader('id', 'object.user.id')}"></th>
             <th th:text="#{object.order.client}"></th>
             <th th:text="#{object.order.employee}"></th>
-            <th th:replace="~{fragments/table-fragments :: sortHeader('approved', 'object.order.approved')}"></th>
+            <th th:text="#{object.order.status}"></th>
+            <th th:text="#{object.order.note}"></th>
             <th th:text="#{object.order.amount}"></th>
             <th th:text="#{object.operation}"></th>
         </tr>
         </thead>
         <tbody>
         <tr th:each="order: ${orders}">
-            <td><span class="float-end" th:text="${order.id}"/></td>
-            <td><span class="float-end" th:text="${order.clientName}"/></td>
-            <td><span class="float-end" th:text="${order.employeeName}"/></td>
+            <td th:text="${order.id}"></td>
+            <td th:text="${order.clientName}"></td>
+            <td th:text="${order.employeeName}"></td>
             <td>
-                <div th:if="${order.approved}">
-                    <form th:action="@{/orders/{id}/unapproved(id=${order.id})}" method="post" style="display:inline;">
-                        <input type="hidden" name="_method" value="patch"/>
-                        <button type="submit" class="btn btn-sm btn-success">
-                            <i class="fa fa-check"></i>
-                        </button>
-                    </form>
-                </div>
-                <div th:unless="${order.approved}">
-                    <form th:action="@{/orders/{id}/approved(id=${order.id})}" method="post" style="display:inline;">
-                        <input type="hidden" name="_method" value="patch"/>
-                        <button type="submit" class="btn btn-sm btn-secondary">
-                            <i class="fa fa-minus"></i>
-                        </button>
-                    </form>
-                </div>
+                <span th:text="#{|order.status.${order.status}|}"
+                      th:classappend="${order.status.name() == 'PENDING_EMPLOYEE'} ? 'badge bg-warning text-dark'
+                                    : (${order.status.name() == 'PENDING_CLIENT'} ? 'badge bg-info text-dark'
+                                    : (${order.status.name() == 'PENDING_DELIVERY'} ? 'badge bg-primary'
+                                    : (${order.status.name() == 'DELIVERING'} ? 'badge bg-success'
+                                    : 'badge bg-secondary')))">
+                </span>
             </td>
+            <td th:text="${order.employeeNote}"></td>
             <td th:text="${order.totalAmount}"></td>
             <td>
                 <div class="d-flex gap-2">
                     <a th:href="@{orders/}+${order.id}+@{/edit}" class="btn btn-sm btn-warning">
                         <i class="fa fa-pencil"></i>
                     </a>
-                    <form th:action="@{/orders/{id}(id=${order.id})}" method="post" style="display:inline;">
+                    <form th:unless="${order.status.name() == 'DELIVERING'}"
+                          th:action="@{/orders/{id}(id=${order.id})}" method="post" style="display:inline;">
                         <input type="hidden" name="_method" value="delete"/>
                         <button type="submit" class="btn btn-sm btn-danger">
                             <i class="fa fa-minus"></i>
@@ -76,7 +66,5 @@
     <a th:href="@{orders/add}" class="btn btn-primary" th:text="#{orders.btn.new}"></a>
 </main>
 <div th:insert="~{footer::footer}"></div>
-
-
 </body>
 </html>
