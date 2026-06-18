@@ -11,6 +11,7 @@ import com.epam.rd.autocode.assessment.appliances.service.DelivererService;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -36,6 +37,7 @@ public class DelivererServiceImpl implements DelivererService {
 
     @Override
     @Loggable
+    @PreAuthorize("hasRole('ADMIN')")
     public void saveDeliverer(DelivererRequestDTO dto) {
         Deliverer deliverer = new Deliverer();
         deliverer.setName(dto.getName());
@@ -56,6 +58,7 @@ public class DelivererServiceImpl implements DelivererService {
 
     @Override
     @Loggable
+    @PreAuthorize("hasRole('ADMIN')")
     public void updateDeliverer(Long id, DelivererUpdateDTO dto) {
         Deliverer deliverer = delivererRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Deliverer", id));
@@ -69,6 +72,7 @@ public class DelivererServiceImpl implements DelivererService {
 
     @Override
     @Loggable
+    @PreAuthorize("hasRole('ADMIN')")
     public void deleteDelivererById(Long id) {
         delivererRepository.deleteById(id);
     }

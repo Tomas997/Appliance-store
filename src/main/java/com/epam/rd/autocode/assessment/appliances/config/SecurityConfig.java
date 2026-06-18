@@ -92,7 +92,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/login", "/error").permitAll()
+                .requestMatchers("/", "/login", "/register", "/error").permitAll()
                 .requestMatchers("/css/**", "/js/**").permitAll()
                 .requestMatchers("/h2-console/**").hasRole("ADMIN")
                 .requestMatchers("/appliances/**").hasAnyRole("ADMIN", "EMPLOYEE")

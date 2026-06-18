@@ -8,13 +8,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+// Працівник магазину (роль EMPLOYEE) — розглядає замовлення клієнтів (схвалення/доопрацювання).
 @Setter
 @Getter
 @Entity
 @NoArgsConstructor
 public class Employee extends User {
     @NotBlank
-    private String department;
+    private String department; // відділ, у якому працює співробітник
 
     public Employee(Long id, String name, String email, String password, String department) {
         super(id, name, email, password);
