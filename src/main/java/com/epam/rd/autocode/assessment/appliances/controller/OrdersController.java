@@ -68,7 +68,6 @@ public class OrdersController {
         model.addAttribute("orderInfo", orderService.findResponseById(id));
         model.addAttribute("orderId", id);
         model.addAttribute("rows", orderService.getOrderRows(id));
-        model.addAttribute("employees", employeeService.findAll());
         return "order/editOrder";
     }
 

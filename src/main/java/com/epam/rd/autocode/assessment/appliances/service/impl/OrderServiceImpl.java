@@ -118,12 +118,8 @@ public class OrderServiceImpl implements OrderService {
                 || order.getStatus() == OrderStatus.DELIVERED) {
             throw new InvalidOrderStateException("Cannot edit an order that is pending delivery, being delivered, or already delivered");
         }
-        if (dto.getEmployeeId() != null) {
-            order.setEmployee(employeeRepository.findById(dto.getEmployeeId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Employee", dto.getEmployeeId())));
-        } else {
-            order.setEmployee(null);
-        }
+        // employee is assigned automatically from whoever approves/requests revision
+        // (see approveByEmployee/requestRevision) — not manually editable here.
         ordersRepository.save(order);
     }
 
