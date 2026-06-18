@@ -20,6 +20,8 @@
     </div>
     <div th:if="${param.registered}" class="alert alert-success" role="alert" th:text="#{login.registered}">
     </div>
+    <div th:if="${param.csrf}" class="alert alert-warning" role="alert" th:text="#{login.csrf}">
+    </div>
 
     <form th:action="@{/login}" method="post">
         <div class="mb-3">
