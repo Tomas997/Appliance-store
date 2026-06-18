@@ -1,5 +1,11 @@
 java.lang.Long,id,1
-java.lang.Boolean,approved,1
 com.epam.rd.autocode.assessment.appliances.model.Client,client,1
 com.epam.rd.autocode.assessment.appliances.model.Employee,employee,1
+com.epam.rd.autocode.assessment.appliances.model.Deliverer,deliverer,1
 java.util.Set,orderRowSet,1
+com.epam.rd.autocode.assessment.appliances.model.OrderStatus,status,1
+java.lang.String,employeeNote,1
+java.time.LocalDateTime,createdAt,1
+java.lang.String,cancelReason,1
+java.time.LocalDateTime,cancelledAt,1
+java.lang.String,cancelledBy,1

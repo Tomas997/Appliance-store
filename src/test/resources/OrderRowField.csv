@@ -2,3 +2,4 @@ java.lang.Long,id
 com.epam.rd.autocode.assessment.appliances.model.Appliance,appliance
 java.math.BigDecimal,amount
 java.lang.Long,number
+com.epam.rd.autocode.assessment.appliances.model.Orders,order

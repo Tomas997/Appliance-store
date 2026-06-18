@@ -110,7 +110,8 @@ class OrderRowTest {
     @CsvSource({"id",
             "appliance",
             "amount",
-            "number"
+            "number",
+            "order"
     })
     void checkFieldsNames(String name){
         final long count = allFields.stream()

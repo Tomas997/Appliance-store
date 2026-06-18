@@ -104,7 +104,14 @@ class OrdersTest {
     @CsvSource({"id",
             "client",
             "employee",
-            "orderRowSet"
+            "deliverer",
+            "orderRowSet",
+            "status",
+            "employeeNote",
+            "createdAt",
+            "cancelReason",
+            "cancelledAt",
+            "cancelledBy"
     })
     void checkFieldsNames(String name){
         final long count = allFields.stream()
