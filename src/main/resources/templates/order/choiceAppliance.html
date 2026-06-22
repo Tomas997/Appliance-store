@@ -18,7 +18,7 @@
         <tr class="table-dark">
             <th th:text="#{object.appliance.name}"></th>
             <th th:text="#{object.appliance.price}"></th>
-            <th>Number</th>
+            <th th:text="#{common.label.quantity}">Number</th>
             <th></th>
         </tr>
         </thead>
@@ -31,14 +31,14 @@
                     <input type="hidden" name="ordersId" th:value="${ordersId}"/>
                     <input type="hidden" name="applianceId" th:value="${appliance.id}"/>
                     <input type="number" name="numbers" min="1" value="1" style="width:70px"/>
-                    <button type="submit" class="btn btn-sm btn-primary">Add</button>
+                    <button type="submit" class="btn btn-sm btn-primary" th:text="#{common.btn.add}">Add</button>
                 </form>
             </td>
         </tr>
         </tbody>
     </table>
 
-    <a th:href="@{/orders/{id}/edit(id=${ordersId})}" class="btn btn-secondary">Back to order</a>
+    <a th:href="@{/orders/{id}/edit(id=${ordersId})}" class="btn btn-secondary" th:text="#{order.btn.back.to.order}">Back to order</a>
 </main>
 <div th:insert="~{footer::footer}"></div>
 </body>

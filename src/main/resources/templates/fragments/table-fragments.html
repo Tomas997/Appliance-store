@@ -18,7 +18,7 @@
 
     <!-- Зліва: кількість елементів -->
     <div style="min-width: 180px" class="d-flex align-items-center gap-2">
-        <label class="text-nowrap small text-muted">На сторінці:</label>
+        <label class="text-nowrap small text-muted" th:text="#{pagination.page.size}">Per page:</label>
         <a th:each="size : ${ {10, 25, 50} }"
            th:href="|?page=0&size=${size}&sort=${sortField},${sortDir}|"
            th:text="${size}"

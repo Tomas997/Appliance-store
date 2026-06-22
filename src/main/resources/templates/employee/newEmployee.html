@@ -34,8 +34,8 @@
             <span th:if="${#fields.hasErrors('department')}" th:errors="*{department}" class="text-danger small"></span>
         </div>
         <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-primary">Save</button>
-            <a th:href="@{/employees}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary" th:text="#{common.btn.save}">Save</button>
+            <a th:href="@{/employees}" class="btn btn-secondary" th:text="#{common.btn.cancel}">Cancel</a>
         </div>
     </form>
 </main>
