@@ -2,6 +2,7 @@ package com.epam.rd.autocode.assessment.appliances.service;
 
 import com.epam.rd.autocode.assessment.appliances.dto.EmployeeRequestDTO;
 import com.epam.rd.autocode.assessment.appliances.dto.EmployeeResponseDTO;
+import com.epam.rd.autocode.assessment.appliances.dto.EmployeeUpdateDTO;
 import com.epam.rd.autocode.assessment.appliances.exception.ResourceNotFoundException;
 import com.epam.rd.autocode.assessment.appliances.model.Employee;
 import com.epam.rd.autocode.assessment.appliances.repository.EmployeeRepository;
@@ -129,7 +130,7 @@ public class EmployeeServiceTest {
     @DisplayName("updateEmployee: повинен оновити поля і закодувати новий пароль")
     void updateEmployee_withNewPassword_shouldEncodeAndSave() {
         Employee existing = new Employee();
-        EmployeeRequestDTO dto = new EmployeeRequestDTO();
+        EmployeeUpdateDTO dto = new EmployeeUpdateDTO();
         dto.setName("Іван");
         dto.setEmail("ivan@epam.com");
         dto.setDepartment("IT");
@@ -155,7 +156,7 @@ public class EmployeeServiceTest {
     void updateEmployee_whenPasswordNull_shouldNotChangePassword() {
         Employee existing = new Employee();
         existing.setPassword("oldEncoded");
-        EmployeeRequestDTO dto = new EmployeeRequestDTO();
+        EmployeeUpdateDTO dto = new EmployeeUpdateDTO();
 
         when(employeeRepository.findById(1L)).thenReturn(Optional.of(existing));
 
@@ -172,7 +173,7 @@ public class EmployeeServiceTest {
     void updateEmployee_whenPasswordBlank_shouldNotChangePassword() {
         Employee existing = new Employee();
         existing.setPassword("oldEncoded");
-        EmployeeRequestDTO dto = new EmployeeRequestDTO();
+        EmployeeUpdateDTO dto = new EmployeeUpdateDTO();
         dto.setPassword("   ");
 
         when(employeeRepository.findById(1L)).thenReturn(Optional.of(existing));
@@ -187,7 +188,7 @@ public class EmployeeServiceTest {
     void updateEmployee_whenNotFound_shouldThrow() {
         when(employeeRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> employeeService.updateEmployee(99L, new EmployeeRequestDTO()))
+        assertThatThrownBy(() -> employeeService.updateEmployee(99L, new EmployeeUpdateDTO()))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("99");
     }

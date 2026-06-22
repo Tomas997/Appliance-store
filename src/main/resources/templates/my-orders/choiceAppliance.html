@@ -30,7 +30,6 @@
                 <form th:action="@{/my-orders/add-into-order}" method="post">
                     <input type="hidden" name="ordersId" th:value="${ordersId}"/>
                     <input type="hidden" name="applianceId" th:value="${appliance.id}"/>
-                    <input type="hidden" name="price" th:value="${appliance.price}"/>
                     <input type="number" name="numbers" min="1" value="1" class="form-control d-inline" style="width:80px"/>
                     <button type="submit" class="btn btn-sm btn-primary">Add</button>
                 </form>

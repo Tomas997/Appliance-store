@@ -149,7 +149,6 @@ class OrdersControllerTest {
         when(orderService.findById(1L)).thenReturn(requestDTO);
         when(orderService.findResponseById(1L)).thenReturn(responseDTO);
         when(orderService.getOrderRows(1L)).thenReturn(Set.of());
-        when(employeeService.findAll()).thenReturn(List.of());
 
         mockMvc.perform(get("/orders/{id}/edit", 1L))
                 .andExpect(status().isOk())
@@ -157,7 +156,7 @@ class OrdersControllerTest {
                 .andExpect(model().attribute("order", requestDTO))
                 .andExpect(model().attribute("orderInfo", responseDTO))
                 .andExpect(model().attribute("orderId", 1L))
-                .andExpect(model().attributeExists("rows", "employees"));
+                .andExpect(model().attributeExists("rows"));
     }
 
     @Test
@@ -173,14 +172,14 @@ class OrdersControllerTest {
     }
 
     @Test
-    @DisplayName("PUT /orders/{id}/edit: відсутній clientId — контролер не валідує DTO (немає @Valid), тож оновлення все одно відбувається")
-    void putEditOrder_missingClientId_shouldStillUpdateAndRedirect() throws Exception {
+    @DisplayName("PUT /orders/{id}/edit: відсутній clientId — DTO валідується (@Valid), оновлення не відбувається")
+    void putEditOrder_missingClientId_shouldReturnFormWithoutUpdating() throws Exception {
         mockMvc.perform(put("/orders/{id}/edit", 1L)
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/orders"));
+                .andExpect(status().isOk())
+                .andExpect(view().name("order/editOrder"));
 
-        verify(orderService).updateOrder(eq(1L), any());
+        verify(orderService, never()).updateOrder(eq(1L), any());
     }
 
     @Test
@@ -301,12 +300,11 @@ class OrdersControllerTest {
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .param("ordersId", "1")
                         .param("applianceId", "2")
-                        .param("numbers", "3")
-                        .param("price", "99.99"))
+                        .param("numbers", "3"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/orders/1/edit"));
 
-        verify(orderService).addRowToOrder(1L, 2L, 3L, new BigDecimal("99.99"));
+        verify(orderService).addRowToOrder(1L, 2L, 3L);
     }
 
     @Test

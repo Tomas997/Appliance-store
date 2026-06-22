@@ -15,7 +15,6 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 @AllArgsConstructor
@@ -67,9 +66,8 @@ public class MyOrdersController {
     @PostMapping("/add-into-order")
     public String addIntoOrder(@RequestParam Long ordersId,
                                @RequestParam Long applianceId,
-                               @RequestParam Long numbers,
-                               @RequestParam BigDecimal price) {
-        orderService.addRowToOrder(ordersId, applianceId, numbers, price);
+                               @RequestParam Long numbers) {
+        orderService.addRowToOrder(ordersId, applianceId, numbers);
         return "redirect:/my-orders/" + ordersId + "/edit";
     }
 

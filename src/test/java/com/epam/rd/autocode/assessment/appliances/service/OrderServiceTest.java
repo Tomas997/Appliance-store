@@ -43,7 +43,7 @@ public class OrderServiceTest {
     private ApplianceRepository applianceRepository;
 
     @Mock
-    private ApplianceInOrderRepository applianceInOrderRepository;
+    private OrderRowRepository orderRowRepository;
 
     @InjectMocks
     private OrderServiceImpl orderService;
@@ -608,25 +608,24 @@ public class OrderServiceTest {
     }
 
     @Test
-    @DisplayName("updateOrder: повинен оновити співробітника і клієнта, потім зберегти")
-    void updateOrder_shouldUpdateFieldsAndSave() {
+    @DisplayName("updateOrder: employeeId у DTO ігнорується — призначення співробітника лишається незмінним і зберігається")
+    void updateOrder_shouldIgnoreEmployeeIdAndKeepExistingEmployee() {
         Orders existing = buildOrder();
-        Employee newEmployee = new Employee();
-        Client newClient = new Client();
+        Employee originalEmployee = existing.getEmployee();
 
         OrderRequestDTO dto = new OrderRequestDTO();
         dto.setEmployeeId(5L);
         dto.setClientId(6L);
 
         when(ordersRepository.findById(1L)).thenReturn(Optional.of(existing));
-        when(employeeRepository.findById(5L)).thenReturn(Optional.of(newEmployee));
 
         orderService.updateOrder(1L, dto);
 
         ArgumentCaptor<Orders> captor = ArgumentCaptor.forClass(Orders.class);
         verify(ordersRepository).save(captor.capture());
 
-        assertThat(captor.getValue().getEmployee()).isSameAs(newEmployee);
+        assertThat(captor.getValue().getEmployee()).isSameAs(originalEmployee);
+        verifyNoInteractions(employeeRepository);
     }
 
     @Test
@@ -660,34 +659,6 @@ public class OrderServiceTest {
 
         assertThatThrownBy(() -> orderService.updateOrder(1L, new OrderRequestDTO()))
                 .isInstanceOf(InvalidOrderStateException.class);
-    }
-
-    @Test
-    @DisplayName("updateOrder: якщо employeeId не вказано — повинен очистити співробітника")
-    void updateOrder_whenEmployeeIdNull_shouldClearEmployee() {
-        Orders existing = buildOrder();
-        when(ordersRepository.findById(1L)).thenReturn(Optional.of(existing));
-
-        orderService.updateOrder(1L, new OrderRequestDTO());
-
-        ArgumentCaptor<Orders> captor = ArgumentCaptor.forClass(Orders.class);
-        verify(ordersRepository).save(captor.capture());
-        assertThat(captor.getValue().getEmployee()).isNull();
-    }
-
-    @Test
-    @DisplayName("updateOrder: якщо нового співробітника не знайдено — кинути ResourceNotFoundException")
-    void updateOrder_whenNewEmployeeNotFound_shouldThrow() {
-        Orders existing = buildOrder();
-        OrderRequestDTO dto = new OrderRequestDTO();
-        dto.setEmployeeId(99L);
-
-        when(ordersRepository.findById(1L)).thenReturn(Optional.of(existing));
-        when(employeeRepository.findById(99L)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> orderService.updateOrder(1L, dto))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessageContaining("99");
     }
 
     @Test
@@ -829,14 +800,15 @@ public class OrderServiceTest {
     void addRowToOrder_shouldCreateRowWithComputedAmountAndSave() {
         Orders order = buildOrder();
         Appliance appliance = new Appliance();
+        appliance.setPrice(new BigDecimal("100.00"));
 
         when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
         when(applianceRepository.findById(2L)).thenReturn(Optional.of(appliance));
 
-        orderService.addRowToOrder(1L, 2L, 3L, new BigDecimal("100.00"));
+        orderService.addRowToOrder(1L, 2L, 3L);
 
         ArgumentCaptor<OrderRow> captor = ArgumentCaptor.forClass(OrderRow.class);
-        verify(applianceInOrderRepository).save(captor.capture());
+        verify(orderRowRepository).save(captor.capture());
 
         OrderRow saved = captor.getValue();
         assertThat(saved.getAppliance()).isSameAs(appliance);
@@ -853,7 +825,16 @@ public class OrderServiceTest {
 
         when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
 
-        assertThatThrownBy(() -> orderService.addRowToOrder(1L, 2L, 1L, BigDecimal.TEN))
+        assertThatThrownBy(() -> orderService.addRowToOrder(1L, 2L, 1L))
+                .isInstanceOf(InvalidOrderStateException.class);
+    }
+
+    @Test
+    @DisplayName("addRowToOrder: якщо number менше 1 — кинути InvalidOrderStateException")
+    void addRowToOrder_whenNumberLessThanOne_shouldThrow() {
+        assertThatThrownBy(() -> orderService.addRowToOrder(1L, 2L, 0L))
+                .isInstanceOf(InvalidOrderStateException.class);
+        assertThatThrownBy(() -> orderService.addRowToOrder(1L, 2L, -1L))
                 .isInstanceOf(InvalidOrderStateException.class);
     }
 
@@ -862,7 +843,7 @@ public class OrderServiceTest {
     void addRowToOrder_whenOrderNotFound_shouldThrow() {
         when(ordersRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> orderService.addRowToOrder(99L, 1L, 1L, BigDecimal.ONE))
+        assertThatThrownBy(() -> orderService.addRowToOrder(99L, 1L, 1L))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("99");
     }
@@ -875,7 +856,7 @@ public class OrderServiceTest {
         when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
         when(applianceRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> orderService.addRowToOrder(1L, 99L, 1L, BigDecimal.ONE))
+        assertThatThrownBy(() -> orderService.addRowToOrder(1L, 99L, 1L))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("99");
     }
@@ -886,11 +867,11 @@ public class OrderServiceTest {
         Orders order = buildOrder();
         OrderRow row = new OrderRow();
         row.setOrder(order);
-        when(applianceInOrderRepository.findById(5L)).thenReturn(Optional.of(row));
+        when(orderRowRepository.findById(5L)).thenReturn(Optional.of(row));
 
         orderService.deleteRowFromOrder(5L);
 
-        verify(applianceInOrderRepository).deleteById(5L);
+        verify(orderRowRepository).deleteById(5L);
     }
 
     @Test
@@ -900,18 +881,18 @@ public class OrderServiceTest {
         order.setStatus(OrderStatus.CANCELLED);
         OrderRow row = new OrderRow();
         row.setOrder(order);
-        when(applianceInOrderRepository.findById(5L)).thenReturn(Optional.of(row));
+        when(orderRowRepository.findById(5L)).thenReturn(Optional.of(row));
 
         assertThatThrownBy(() -> orderService.deleteRowFromOrder(5L))
                 .isInstanceOf(InvalidOrderStateException.class);
 
-        verify(applianceInOrderRepository, never()).deleteById(any());
+        verify(orderRowRepository, never()).deleteById(any());
     }
 
     @Test
     @DisplayName("deleteRowFromOrder: якщо рядок не знайдено — кинути ResourceNotFoundException")
     void deleteRowFromOrder_whenRowNotFound_shouldThrow() {
-        when(applianceInOrderRepository.findById(99L)).thenReturn(Optional.empty());
+        when(orderRowRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> orderService.deleteRowFromOrder(99L))
                 .isInstanceOf(ResourceNotFoundException.class)

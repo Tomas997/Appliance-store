@@ -19,7 +19,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -29,49 +31,46 @@ public class OrderServiceImpl implements OrderService {
     private final ClientRepository clientRepository;
     private final DelivererRepository delivererRepository;
     private final ApplianceRepository applianceRepository;
-    private final ApplianceInOrderRepository applianceInOrderRepository;
+    private final OrderRowRepository orderRowRepository;
 
     @Override
     public List<OrderResponseDTO> findAll() {
-        return ordersRepository.findAll().stream()
-                .map(this::toDto)
-                .toList();
+        return toDtoList(ordersRepository.findAll());
     }
 
     @Override
     public Page<OrderResponseDTO> findAll(Pageable pageable) {
-        return ordersRepository.findByStatusNotIn(List.of(OrderStatus.DRAFT, OrderStatus.CANCELLED), pageable)
-                .map(this::toDto);
+        return toDtoPage(ordersRepository.findByStatusNotIn(List.of(OrderStatus.DRAFT, OrderStatus.CANCELLED), pageable));
     }
 
     @Override
     public Page<OrderResponseDTO> findCancelled(Pageable pageable) {
-        return ordersRepository.findByStatus(OrderStatus.CANCELLED, pageable).map(this::toDto);
+        return toDtoPage(ordersRepository.findByStatus(OrderStatus.CANCELLED, pageable));
     }
 
     @Override
     public Page<OrderResponseDTO> findByClientEmail(String email, Pageable pageable) {
-        return ordersRepository.findByClient_EmailAndStatusNot(email, OrderStatus.CANCELLED, pageable).map(this::toDto);
+        return toDtoPage(ordersRepository.findByClient_EmailAndStatusNot(email, OrderStatus.CANCELLED, pageable));
     }
 
     @Override
     public Page<OrderResponseDTO> findCancelledByClientEmail(String email, Pageable pageable) {
-        return ordersRepository.findByClient_EmailAndStatus(email, OrderStatus.CANCELLED, pageable).map(this::toDto);
+        return toDtoPage(ordersRepository.findByClient_EmailAndStatus(email, OrderStatus.CANCELLED, pageable));
     }
 
     @Override
     public Page<OrderResponseDTO> findPendingForDelivery(Pageable pageable) {
-        return ordersRepository.findByStatus(OrderStatus.PENDING_DELIVERY, pageable).map(this::toDto);
+        return toDtoPage(ordersRepository.findByStatus(OrderStatus.PENDING_DELIVERY, pageable));
     }
 
     @Override
     public Page<OrderResponseDTO> findDelivering(Pageable pageable) {
-        return ordersRepository.findByStatus(OrderStatus.DELIVERING, pageable).map(this::toDto);
+        return toDtoPage(ordersRepository.findByStatus(OrderStatus.DELIVERING, pageable));
     }
 
     @Override
     public Page<OrderResponseDTO> findDelivered(Pageable pageable) {
-        return ordersRepository.findByStatus(OrderStatus.DELIVERED, pageable).map(this::toDto);
+        return toDtoPage(ordersRepository.findByStatus(OrderStatus.DELIVERED, pageable));
     }
 
     @Override
@@ -95,7 +94,8 @@ public class OrderServiceImpl implements OrderService {
     public OrderResponseDTO findResponseById(Long id) {
         Orders order = ordersRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", id));
-        return toDto(order);
+        Map<Long, BigDecimal> totals = totalAmountsByOrderId(List.of(order));
+        return toDto(order, totals.getOrDefault(id, BigDecimal.ZERO));
     }
 
     @Override
@@ -251,7 +251,10 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Loggable
-    public void addRowToOrder(Long orderId, Long applianceId, Long number, BigDecimal price) {
+    public void addRowToOrder(Long orderId, Long applianceId, Long number) {
+        if (number == null || number < 1) {
+            throw new InvalidOrderStateException("Number must be at least 1");
+        }
         Orders order = ordersRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
         if (order.getStatus() != OrderStatus.DRAFT && order.getStatus() != OrderStatus.PENDING_EMPLOYEE) {
@@ -262,21 +265,21 @@ public class OrderServiceImpl implements OrderService {
         OrderRow row = new OrderRow();
         row.setAppliance(appliance);
         row.setNumber(number);
-        row.setAmount(price.multiply(BigDecimal.valueOf(number)));
+        row.setAmount(appliance.getPrice().multiply(BigDecimal.valueOf(number)));
         row.setOrder(order);
-        applianceInOrderRepository.save(row);
+        orderRowRepository.save(row);
     }
 
     @Override
     @Loggable
     public void deleteRowFromOrder(Long rowId) {
-        OrderRow row = applianceInOrderRepository.findById(rowId)
+        OrderRow row = orderRowRepository.findById(rowId)
                 .orElseThrow(() -> new ResourceNotFoundException("OrderRow", rowId));
         Orders order = row.getOrder();
         if (order.getStatus() != OrderStatus.DRAFT && order.getStatus() != OrderStatus.PENDING_EMPLOYEE) {
             throw new InvalidOrderStateException("Cannot modify order in current state");
         }
-        applianceInOrderRepository.deleteById(rowId);
+        orderRowRepository.deleteById(rowId);
     }
 
     @Override
@@ -286,7 +289,30 @@ public class OrderServiceImpl implements OrderService {
         return order.getOrderRowSet();
     }
 
-    private OrderResponseDTO toDto(Orders order) {
+    private List<OrderResponseDTO> toDtoList(List<Orders> orders) {
+        Map<Long, BigDecimal> totals = totalAmountsByOrderId(orders);
+        return orders.stream()
+                .map(order -> toDto(order, totals.getOrDefault(order.getId(), BigDecimal.ZERO)))
+                .toList();
+    }
+
+    private Page<OrderResponseDTO> toDtoPage(Page<Orders> page) {
+        Map<Long, BigDecimal> totals = totalAmountsByOrderId(page.getContent());
+        return page.map(order -> toDto(order, totals.getOrDefault(order.getId(), BigDecimal.ZERO)));
+    }
+
+    private Map<Long, BigDecimal> totalAmountsByOrderId(List<Orders> orders) {
+        if (orders.isEmpty()) {
+            return Map.of();
+        }
+        List<Long> orderIds = orders.stream().map(Orders::getId).toList();
+        return orderRowRepository.sumAmountsByOrderIds(orderIds).stream()
+                .collect(Collectors.toMap(
+                        OrderRowRepository.OrderAmountProjection::getOrderId,
+                        OrderRowRepository.OrderAmountProjection::getTotalAmount));
+    }
+
+    private OrderResponseDTO toDto(Orders order, BigDecimal totalAmount) {
         OrderResponseDTO dto = new OrderResponseDTO();
         dto.setId(order.getId());
         dto.setClientName(order.getClient() != null ? order.getClient().getName() : "—");
@@ -298,10 +324,7 @@ public class OrderServiceImpl implements OrderService {
         dto.setCancelReason(order.getCancelReason());
         dto.setCancelledAt(order.getCancelledAt());
         dto.setCancelledBy(order.getCancelledBy());
-        BigDecimal total = order.getOrderRowSet().stream()
-                .map(OrderRow::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        dto.setTotalAmount(total);
+        dto.setTotalAmount(totalAmount);
         return dto;
     }
 

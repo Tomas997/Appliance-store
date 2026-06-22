@@ -37,6 +37,7 @@ public class ClientServiceImpl implements ClientService {
     }
 
     @Override
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
     public List<ClientResponseDTO> findAll() {
         return clientRepository.findAll().stream()
                 .map(this::toDto)
@@ -44,12 +45,14 @@ public class ClientServiceImpl implements ClientService {
     }
 
     @Override
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
     public Page<ClientResponseDTO> findAll(Pageable pageable) {
        return clientRepository.findAll(pageable)
                 .map(this::toDto);
     }
 
     @Override
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
     public ClientUpdateDTO findById(Long id) {
         Client client = clientRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Client", id));
@@ -58,6 +61,7 @@ public class ClientServiceImpl implements ClientService {
 
     @Override
     @Loggable
+    @PreAuthorize("hasRole('ADMIN')")
     public void updateClient(Long id, ClientUpdateDTO clientDto) {
         Client client = clientRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Client", id));

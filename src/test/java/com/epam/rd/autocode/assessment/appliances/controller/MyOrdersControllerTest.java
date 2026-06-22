@@ -158,12 +158,11 @@ class MyOrdersControllerTest {
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .param("ordersId", "1")
                         .param("applianceId", "2")
-                        .param("numbers", "3")
-                        .param("price", "49.50"))
+                        .param("numbers", "3"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/my-orders/1/edit"));
 
-        verify(orderService).addRowToOrder(1L, 2L, 3L, new BigDecimal("49.50"));
+        verify(orderService).addRowToOrder(1L, 2L, 3L);
     }
 
     @Test

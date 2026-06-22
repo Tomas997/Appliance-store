@@ -18,8 +18,6 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
-
 @AllArgsConstructor
 @Controller
 @RequestMapping("/orders")
@@ -73,7 +71,7 @@ public class OrdersController {
 
     @PutMapping("/{id}/edit")
     public String editOrder(@PathVariable Long id,
-                            @ModelAttribute("order") OrderRequestDTO order,
+                            @Valid @ModelAttribute("order") OrderRequestDTO order,
                             BindingResult result, Model model) {
         if (result.hasErrors()) {
             model.addAttribute("orderId", id);
@@ -131,9 +129,8 @@ public class OrdersController {
     @PostMapping("/add-into-order")
     public String addIntoOrder(@RequestParam Long ordersId,
                                @RequestParam Long applianceId,
-                               @RequestParam Long numbers,
-                               @RequestParam BigDecimal price) {
-        orderService.addRowToOrder(ordersId, applianceId, numbers, price);
+                               @RequestParam Long numbers) {
+        orderService.addRowToOrder(ordersId, applianceId, numbers);
         return "redirect:/orders/" + ordersId + "/edit";
     }
 

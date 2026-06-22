@@ -4,6 +4,7 @@ import com.epam.rd.autocode.assessment.appliances.aspect.Loggable;
 import com.epam.rd.autocode.assessment.appliances.dto.ClientResponseDTO;
 import com.epam.rd.autocode.assessment.appliances.dto.EmployeeRequestDTO;
 import com.epam.rd.autocode.assessment.appliances.dto.EmployeeResponseDTO;
+import com.epam.rd.autocode.assessment.appliances.dto.EmployeeUpdateDTO;
 import com.epam.rd.autocode.assessment.appliances.model.Employee;
 import com.epam.rd.autocode.assessment.appliances.repository.EmployeeRepository;
 import com.epam.rd.autocode.assessment.appliances.exception.ResourceNotFoundException;
@@ -26,6 +27,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final ModelMapper modelMapper;
 
     @Override
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
     public List<EmployeeResponseDTO> findAll() {
         return employeeRepository.findAll().stream()
                 .map(this::toDto)
@@ -33,6 +35,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
     @Override
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
     public Page<EmployeeResponseDTO> findAll(Pageable pageable) {
         return employeeRepository.findAll(pageable)
                 .map(this::toDto);
@@ -48,6 +51,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
     @Override
+    @PreAuthorize("hasRole('ADMIN')")
     public EmployeeRequestDTO findById(Long id) {
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee", id));
@@ -57,7 +61,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     @Loggable
     @PreAuthorize("hasRole('ADMIN')")
-    public void updateEmployee(Long id, EmployeeRequestDTO dto) {
+    public void updateEmployee(Long id, EmployeeUpdateDTO dto) {
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee", id));
         employee.setName(dto.getName());

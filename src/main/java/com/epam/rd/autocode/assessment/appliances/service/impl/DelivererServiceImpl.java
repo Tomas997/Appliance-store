@@ -24,6 +24,7 @@ public class DelivererServiceImpl implements DelivererService {
     private final PasswordEncoder passwordEncoder;
 
     @Override
+    @PreAuthorize("hasRole('ADMIN')")
     public List<DelivererResponseDTO> findAll() {
         return delivererRepository.findAll().stream()
                 .map(this::toDto)
@@ -31,6 +32,7 @@ public class DelivererServiceImpl implements DelivererService {
     }
 
     @Override
+    @PreAuthorize("hasRole('ADMIN')")
     public Page<DelivererResponseDTO> findAll(Pageable pageable) {
         return delivererRepository.findAll(pageable).map(this::toDto);
     }
@@ -47,6 +49,7 @@ public class DelivererServiceImpl implements DelivererService {
     }
 
     @Override
+    @PreAuthorize("hasRole('ADMIN')")
     public DelivererUpdateDTO findById(Long id) {
         Deliverer deliverer = delivererRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Deliverer", id));

@@ -2,6 +2,7 @@ package com.epam.rd.autocode.assessment.appliances.controller;
 
 import com.epam.rd.autocode.assessment.appliances.dto.EmployeeRequestDTO;
 import com.epam.rd.autocode.assessment.appliances.dto.EmployeeResponseDTO;
+import com.epam.rd.autocode.assessment.appliances.dto.EmployeeUpdateDTO;
 import com.epam.rd.autocode.assessment.appliances.service.EmployeeService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -63,7 +64,7 @@ public class EmployeeController {
 
     @PutMapping("/{id}/edit")
     public String editEmployee(@PathVariable Long id,
-                               @Valid @ModelAttribute("employee") EmployeeRequestDTO employee,
+                               @Valid @ModelAttribute("employee") EmployeeUpdateDTO employee,
                                BindingResult bindingResult, Model model) {
         if (bindingResult.hasErrors()) {
             model.addAttribute("employeeId", id);

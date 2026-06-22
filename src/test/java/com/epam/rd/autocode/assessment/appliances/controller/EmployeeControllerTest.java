@@ -47,7 +47,7 @@ class EmployeeControllerTest {
     @Test
     @DisplayName("GET /employees: повинен повернути сторінку зі списком співробітників та атрибутами пагінації")
     void getEmployees_shouldReturnEmployeesViewWithPaginationAttributes() throws Exception {
-        EmployeeResponseDTO dto = new EmployeeResponseDTO(1L, "Andrii", "andrii@kpi.ua", "Admin123", "Sales");
+        EmployeeResponseDTO dto = new EmployeeResponseDTO(1L, "Andrii", "andrii@kpi.ua", "Sales");
         Page<EmployeeResponseDTO> page = new PageImpl<>(
                 List.of(dto),
                 PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "id")),

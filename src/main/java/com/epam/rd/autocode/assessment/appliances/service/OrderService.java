@@ -32,7 +32,7 @@ public interface OrderService {
     List<OrderRowPriceChangeDTO> submitForReview(Long id);
     void requestRevision(Long id, String note, String employeeEmail);
     void cancelOrder(Long id, String reason, String cancelledByEmail);
-    void addRowToOrder(Long orderId, Long applianceId, Long number, BigDecimal price);
+    void addRowToOrder(Long orderId, Long applianceId, Long number);
     void deleteRowFromOrder(Long rowId);
     Set<OrderRow> getOrderRows(Long orderId);
 }
