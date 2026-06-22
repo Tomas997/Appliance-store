@@ -22,6 +22,8 @@
     </div>
     <div th:if="${param.csrf}" class="alert alert-warning" role="alert" th:text="#{login.csrf}">
     </div>
+    <div th:if="${param.locked}" class="alert alert-danger" role="alert" th:text="#{login.locked}">
+    </div>
 
     <form th:action="@{/login}" method="post">
         <div class="mb-3">

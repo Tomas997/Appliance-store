@@ -1,5 +1,6 @@
 package com.epam.rd.autocode.assessment.appliances.config;
 
+import com.epam.rd.autocode.assessment.appliances.security.LoginRateLimitAuthenticationProvider;
 import com.epam.rd.autocode.assessment.appliances.service.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -8,6 +9,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.DefaultAuthenticationEventPublisher;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.http.HttpMethod;
@@ -36,6 +38,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final CustomUserDetailsService customUserDetailsService;
+    private final LoginRateLimitAuthenticationProvider loginRateLimitAuthenticationProvider;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -62,7 +65,8 @@ public class SecurityConfig {
         inMemoryProvider.setUserDetailsService(inMemoryUserDetailsManager());
         inMemoryProvider.setPasswordEncoder(passwordEncoder());
 
-        ProviderManager providerManager = new ProviderManager(List.of(dbProvider, inMemoryProvider));
+        ProviderManager providerManager = new ProviderManager(
+                List.of(loginRateLimitAuthenticationProvider, dbProvider, inMemoryProvider));
         providerManager.setAuthenticationEventPublisher(new DefaultAuthenticationEventPublisher(eventPublisher));
         return providerManager;
     }
@@ -117,7 +121,12 @@ public class SecurityConfig {
                 .loginPage("/login")
                 .usernameParameter("email")
                 .defaultSuccessUrl("/", true)
-                .failureUrl("/login?error=true")
+                .failureHandler((request, response, exception) -> {
+                    String redirect = exception instanceof LockedException
+                            ? "/login?locked=true"
+                            : "/login?error=true";
+                    response.sendRedirect(request.getContextPath() + redirect);
+                })
                 .permitAll()
             )
             .logout(logout -> logout
