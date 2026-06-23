@@ -4,12 +4,14 @@ import com.epam.rd.autocode.assessment.appliances.aspect.Loggable;
 import com.epam.rd.autocode.assessment.appliances.dto.ClientRequestDTO;
 import com.epam.rd.autocode.assessment.appliances.dto.ClientResponseDTO;
 import com.epam.rd.autocode.assessment.appliances.dto.ClientUpdateDTO;
+import com.epam.rd.autocode.assessment.appliances.exception.EmailAlreadyInUseException;
 import com.epam.rd.autocode.assessment.appliances.exception.ResourceNotFoundException;
 import com.epam.rd.autocode.assessment.appliances.model.Client;
 import com.epam.rd.autocode.assessment.appliances.repository.ClientRepository;
 import com.epam.rd.autocode.assessment.appliances.service.ClientService;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -23,17 +25,25 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ClientServiceImpl implements ClientService {
     private final ClientRepository clientRepository;
     private final PasswordEncoder passwordEncoder;
     private final ModelMapper modelMapper;
 
+    @Value("${admin.email}")
+    private String adminEmail;
+
     @Override
     @Loggable
     @Transactional
     public void saveClient(ClientRequestDTO clientDto) {
+        if (clientDto.getEmail() != null
+                && (clientDto.getEmail().equalsIgnoreCase(adminEmail)
+                    || clientRepository.findByEmail(clientDto.getEmail()).isPresent())) {
+            throw new EmailAlreadyInUseException(clientDto.getEmail());
+        }
         Client client = toEntity(clientDto);
         client.setPassword(passwordEncoder.encode(clientDto.getPassword()));
         clientRepository.save(client);

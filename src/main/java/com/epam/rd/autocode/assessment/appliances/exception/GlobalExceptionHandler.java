@@ -38,6 +38,13 @@ public class GlobalExceptionHandler {
         return "error/not-found";
     }
 
+    @ExceptionHandler(EmailAlreadyInUseException.class)
+    public String handleEmailAlreadyInUse(EmailAlreadyInUseException ex, Model model) {
+        log.warn("Registration rejected: {}", ex.getMessage());
+        model.addAttribute("errorMessage", msg("error.registration.failed"));
+        return "error/not-found";
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public String handleDataIntegrity(DataIntegrityViolationException ex, Model model) {
         log.warn("Data integrity violation: {}", ex.getMessage());
