@@ -48,15 +48,18 @@ public class ApplianceServiceTest {
 
         Manufacturer manufacturer = new Manufacturer(10L, "Samsung");
         Appliance appliance = new Appliance();
+        appliance.setId(42L);
 
         when(modelMapper.map(dto, Appliance.class)).thenReturn(appliance);
         when(manufacturerRepository.findById(10L)).thenReturn(Optional.of(manufacturer));
+        when(applianceRepository.save(appliance)).thenReturn(appliance);
 
-        applianceService.saveAppliance(dto);
+        Long savedId = applianceService.saveAppliance(dto);
 
         ArgumentCaptor<Appliance> captor = ArgumentCaptor.forClass(Appliance.class);
         verify(applianceRepository).save(captor.capture());
         assertThat(captor.getValue().getManufacturer()).isSameAs(manufacturer);
+        assertThat(savedId).isEqualTo(42L);
     }
 
     @Test

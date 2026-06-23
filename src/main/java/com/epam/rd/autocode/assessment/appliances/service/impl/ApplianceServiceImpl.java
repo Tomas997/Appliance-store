@@ -49,8 +49,8 @@ public class ApplianceServiceImpl implements ApplianceService {
     @Override
     @Loggable
     @Transactional
-    public void saveAppliance(ApplianceRequestDTO dto) {
-        applianceRepository.save(toEntity(dto));
+    public Long saveAppliance(ApplianceRequestDTO dto) {
+        return applianceRepository.save(toEntity(dto)).getId();
     }
 
     @Override
