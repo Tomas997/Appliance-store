@@ -14,11 +14,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
 @AllArgsConstructor
+@Transactional(readOnly = true)
 public class DelivererServiceImpl implements DelivererService {
     private final DelivererRepository delivererRepository;
     private final PasswordEncoder passwordEncoder;
@@ -39,6 +41,7 @@ public class DelivererServiceImpl implements DelivererService {
 
     @Override
     @Loggable
+    @Transactional
     @PreAuthorize("hasRole('ADMIN')")
     public void saveDeliverer(DelivererRequestDTO dto) {
         Deliverer deliverer = new Deliverer();
@@ -61,6 +64,7 @@ public class DelivererServiceImpl implements DelivererService {
 
     @Override
     @Loggable
+    @Transactional
     @PreAuthorize("hasRole('ADMIN')")
     public void updateDeliverer(Long id, DelivererUpdateDTO dto) {
         Deliverer deliverer = delivererRepository.findById(id)
@@ -75,6 +79,7 @@ public class DelivererServiceImpl implements DelivererService {
 
     @Override
     @Loggable
+    @Transactional
     @PreAuthorize("hasRole('ADMIN')")
     public void deleteDelivererById(Long id) {
         delivererRepository.deleteById(id);

@@ -14,10 +14,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -25,6 +27,7 @@ import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
+@Transactional(readOnly = true)
 public class OrderServiceImpl implements OrderService {
     private final OrdersRepository ordersRepository;
     private final EmployeeRepository employeeRepository;
@@ -75,12 +78,14 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Loggable
+    @Transactional
     public void saveOrder(OrderRequestDTO dto) {
         ordersRepository.save(toEntity(dto));
     }
 
     @Override
     @Loggable
+    @Transactional
     public Long createClientOrder(String clientEmail) {
         Client client = clientRepository.findByEmail(clientEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Client", clientEmail));
@@ -111,6 +116,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Loggable
+    @Transactional
     public void updateOrder(Long id, OrderRequestDTO dto) {
         Orders order = ordersRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", id));
@@ -125,6 +131,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Loggable
+    @Transactional
     public void deleteOrderById(Long id) {
         Orders order = ordersRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", id));
@@ -136,6 +143,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Loggable
+    @Transactional
     @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
     public void approveByEmployee(Long id, String note, String employeeEmail) {
         Orders order = ordersRepository.findById(id)
@@ -151,6 +159,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Loggable
+    @Transactional
     @PreAuthorize("hasRole('DELIVERER')")
     public void acceptByDeliverer(Long id, String delivererEmail) {
         Orders order = ordersRepository.findById(id)
@@ -167,6 +176,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Loggable
+    @Transactional
     @PreAuthorize("hasRole('DELIVERER')")
     public void markAsDelivered(Long id, String delivererEmail) {
         Orders order = ordersRepository.findById(id)
@@ -180,6 +190,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Loggable
+    @Transactional
     @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
     public void requestRevision(Long id, String note, String employeeEmail) {
         Orders order = ordersRepository.findById(id)
@@ -197,6 +208,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Loggable
+    @Transactional
     @PreAuthorize("hasRole('CLIENT')")
     public List<OrderRowPriceChangeDTO> submitForReview(Long id) {
         Orders order = ordersRepository.findById(id)
@@ -229,6 +241,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Loggable
+    @Transactional
     @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE','CLIENT')")
     public void cancelOrder(Long id, String reason, String cancelledByEmail) {
         Orders order = ordersRepository.findById(id)
@@ -251,6 +264,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Loggable
+    @Transactional
     public void addRowToOrder(Long orderId, Long applianceId, Long number) {
         if (number == null || number < 1) {
             throw new InvalidOrderStateException("Number must be at least 1");
@@ -272,6 +286,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Loggable
+    @Transactional
     public void deleteRowFromOrder(Long rowId) {
         OrderRow row = orderRowRepository.findById(rowId)
                 .orElseThrow(() -> new ResourceNotFoundException("OrderRow", rowId));
@@ -286,7 +301,7 @@ public class OrderServiceImpl implements OrderService {
     public Set<OrderRow> getOrderRows(Long orderId) {
         Orders order = ordersRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
-        return order.getOrderRowSet();
+        return new HashSet<>(order.getOrderRowSet());
     }
 
     private List<OrderResponseDTO> toDtoList(List<Orders> orders) {

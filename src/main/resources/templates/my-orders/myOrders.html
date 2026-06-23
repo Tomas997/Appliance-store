@@ -90,6 +90,8 @@
         </tbody>
     </table>
 
+    <div th:replace="~{fragments/table-fragments :: pagination}"></div>
+
     <form th:action="@{/my-orders/create}" method="post" class="mt-3">
         <button type="submit" class="btn btn-primary" th:text="#{my.orders.btn.new}">Create New Order</button>
     </form>

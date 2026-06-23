@@ -57,6 +57,8 @@
         </tbody>
     </table>
 
+    <div th:replace="~{fragments/table-fragments :: pagination}"></div>
+
     <p th:if="${#lists.isEmpty(orders)}" class="text-muted">No orders in this view.</p>
 </main>
 <div th:insert="~{footer::footer}"></div>

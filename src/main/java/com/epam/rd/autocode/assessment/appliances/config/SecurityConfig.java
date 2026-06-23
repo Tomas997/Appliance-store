@@ -93,8 +93,9 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationManager authenticationManager) throws Exception {
         http
+            .authenticationManager(authenticationManager)
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/", "/login", "/register", "/error").permitAll()
                 .requestMatchers("/css/**", "/js/**").permitAll()

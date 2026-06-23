@@ -16,11 +16,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
 @AllArgsConstructor
+@Transactional(readOnly = true)
 public class EmployeeServiceImpl implements EmployeeService {
     private final EmployeeRepository employeeRepository;
     private final PasswordEncoder passwordEncoder;
@@ -43,6 +45,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     @Override
     @Loggable
+    @Transactional
     @PreAuthorize("hasRole('ADMIN')")
     public void saveEmployee(EmployeeRequestDTO dto) {
         Employee employee = toEntity(dto);
@@ -60,6 +63,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     @Override
     @Loggable
+    @Transactional
     @PreAuthorize("hasRole('ADMIN')")
     public void updateEmployee(Long id, EmployeeUpdateDTO dto) {
         Employee employee = employeeRepository.findById(id)
@@ -75,6 +79,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     @Override
     @Loggable
+    @Transactional
     @PreAuthorize("hasRole('ADMIN')")
     public void deleteEmployeeById(Long id) {
         employeeRepository.deleteById(id);

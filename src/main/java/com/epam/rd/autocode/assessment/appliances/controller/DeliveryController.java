@@ -22,6 +22,7 @@ public class DeliveryController {
     public String deliveries(@RequestParam(defaultValue = "pending") String tab,
                              @PageableDefault(sort = "id", direction = Sort.Direction.ASC) Pageable pageable,
                              Model model) {
+        Sort.Order order = pageable.getSort().iterator().next();
         Page<OrderResponseDTO> orders = switch (tab) {
             case "delivering" -> orderService.findDelivering(pageable);
             case "delivered" -> orderService.findDelivered(pageable);
@@ -31,6 +32,8 @@ public class DeliveryController {
         model.addAttribute("currentPage", orders.getNumber());
         model.addAttribute("totalPages", orders.getTotalPages());
         model.addAttribute("pageSize", orders.getSize());
+        model.addAttribute("sortField", order.getProperty());
+        model.addAttribute("sortDir", order.getDirection().name().toLowerCase());
         model.addAttribute("tab", tab);
         return "delivery/deliveries";
     }

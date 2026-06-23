@@ -45,6 +45,8 @@
         </tbody>
     </table>
 
+    <div th:replace="~{fragments/table-fragments :: pagination}"></div>
+
     <a th:href="@{/deliverers/add}" class="btn btn-primary" th:text="#{deliverer.btn.new}">New Deliverer</a>
 </main>
 <div th:insert="~{footer::footer}"></div>

@@ -12,11 +12,13 @@ import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
 @AllArgsConstructor
+@Transactional(readOnly = true)
 public class ManufacturerServiceImpl implements ManufacturerService {
     private final ManufacturerRepository manufacturerRepository;
     private final ModelMapper modelMapper;
@@ -36,6 +38,7 @@ public class ManufacturerServiceImpl implements ManufacturerService {
 
     @Override
     @Loggable
+    @Transactional
     public void saveManufacturer(ManufacturerRequestDTO dto) {
         manufacturerRepository.save(toEntity(dto));
     }
@@ -49,6 +52,7 @@ public class ManufacturerServiceImpl implements ManufacturerService {
 
     @Override
     @Loggable
+    @Transactional
     public void updateManufacturer(Long id, ManufacturerRequestDTO dto) {
         Manufacturer manufacturer = manufacturerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Manufacturer", id));
@@ -58,6 +62,7 @@ public class ManufacturerServiceImpl implements ManufacturerService {
 
     @Override
     @Loggable
+    @Transactional
     public void deleteManufacturerById(Long id) {
         manufacturerRepository.deleteById(id);
     }

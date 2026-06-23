@@ -17,12 +17,14 @@ import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
+@Transactional(readOnly = true)
 public class ClientServiceImpl implements ClientService {
     private final ClientRepository clientRepository;
     private final PasswordEncoder passwordEncoder;
@@ -30,6 +32,7 @@ public class ClientServiceImpl implements ClientService {
 
     @Override
     @Loggable
+    @Transactional
     public void saveClient(ClientRequestDTO clientDto) {
         Client client = toEntity(clientDto);
         client.setPassword(passwordEncoder.encode(clientDto.getPassword()));
@@ -61,6 +64,7 @@ public class ClientServiceImpl implements ClientService {
 
     @Override
     @Loggable
+    @Transactional
     @PreAuthorize("hasRole('ADMIN')")
     public void updateClient(Long id, ClientUpdateDTO clientDto) {
         Client client = clientRepository.findById(id)
@@ -76,6 +80,7 @@ public class ClientServiceImpl implements ClientService {
 
     @Override
     @Loggable
+    @Transactional
     @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
     public void deleteClientById(Long clientId) {
         clientRepository.deleteById(clientId);

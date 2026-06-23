@@ -13,11 +13,13 @@ import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
 @AllArgsConstructor
+@Transactional(readOnly = true)
 public class ApplianceServiceImpl implements ApplianceService {
     private final ApplianceRepository applianceRepository;
     private final ManufacturerRepository manufacturerRepository;
@@ -38,6 +40,7 @@ public class ApplianceServiceImpl implements ApplianceService {
 
     @Override
     @Loggable
+    @Transactional
     public void saveAppliance(ApplianceRequestDTO dto) {
         applianceRepository.save(toEntity(dto));
     }
@@ -53,6 +56,7 @@ public class ApplianceServiceImpl implements ApplianceService {
 
     @Override
     @Loggable
+    @Transactional
     public void updateAppliance(Long id, ApplianceRequestDTO dto) {
         Appliance appliance = applianceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Appliance", id));
@@ -64,6 +68,7 @@ public class ApplianceServiceImpl implements ApplianceService {
 
     @Override
     @Loggable
+    @Transactional
     public void deleteApplianceById(Long id) {
         applianceRepository.deleteById(id);
     }
