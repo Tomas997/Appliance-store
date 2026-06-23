@@ -28,15 +28,17 @@ public class ApplianceController {
     private final ManufacturerService manufacturerService;
 
     @GetMapping("")
-    public String appliances(@PageableDefault(sort = "id", direction = Sort.Direction.ASC) Pageable pageable, Model model) {
+    public String appliances(@RequestParam(required = false) String q,
+                             @PageableDefault(sort = "id", direction = Sort.Direction.ASC) Pageable pageable, Model model) {
         Sort.Order order = pageable.getSort().iterator().next();
-        Page<ApplianceResponseDTO> appliances = applianceService.findAll(pageable);
+        Page<ApplianceResponseDTO> appliances = applianceService.search(q, pageable);
         model.addAttribute("appliances", appliances.getContent());
         model.addAttribute("currentPage", appliances.getNumber());
         model.addAttribute("totalPages", appliances.getTotalPages());
         model.addAttribute("pageSize", appliances.getSize());
         model.addAttribute("sortField", order.getProperty());
         model.addAttribute("sortDir", order.getDirection().name().toLowerCase());
+        model.addAttribute("q", q);
         return "appliance/appliances";
     }
 

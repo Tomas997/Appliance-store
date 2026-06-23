@@ -39,6 +39,14 @@ public class ApplianceServiceImpl implements ApplianceService {
     }
 
     @Override
+    public Page<ApplianceResponseDTO> search(String name, Pageable pageable) {
+        Page<Appliance> page = (name == null || name.isBlank())
+                ? applianceRepository.findAll(pageable)
+                : applianceRepository.findByNameContainingIgnoreCase(name.trim(), pageable);
+        return page.map(this::toDto);
+    }
+
+    @Override
     @Loggable
     @Transactional
     public void saveAppliance(ApplianceRequestDTO dto) {

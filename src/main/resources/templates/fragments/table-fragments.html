@@ -20,7 +20,7 @@
     <div style="min-width: 180px" class="d-flex align-items-center gap-2">
         <label class="text-nowrap small text-muted" th:text="#{pagination.page.size}">Per page:</label>
         <a th:each="size : ${ {10, 25, 50} }"
-           th:href="|?page=0&size=${size}&sort=${sortField},${sortDir}|"
+           th:href="@{(page=0, size=${size}, sort=${sortField} + ',' + ${sortDir}, q=${q})}"
            th:text="${size}"
            th:classappend="${pageSize == size} ? 'fw-bold text-decoration-underline' : ''"
            class="link-secondary mx-1">
@@ -34,7 +34,7 @@
 
                 <!-- Назад -->
                 <li class="page-item" th:classappend="${currentPage == 0} ? disabled">
-                    <a class="page-link" th:href="|?page=${currentPage - 1}&size=${pageSize}&sort=${sortField},${sortDir}|">
+                    <a class="page-link" th:href="@{(page=${currentPage - 1}, size=${pageSize}, sort=${sortField} + ',' + ${sortDir}, q=${q})}">
                         &laquo;
                     </a>
                 </li>
@@ -44,7 +44,7 @@
                     th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
                     th:classappend="${i == currentPage} ? active">
                     <a class="page-link"
-                       th:href="|?page=${i}&size=${pageSize}&sort=${sortField},${sortDir}|"
+                       th:href="@{(page=${i}, size=${pageSize}, sort=${sortField} + ',' + ${sortDir}, q=${q})}"
                        th:text="${i + 1}">
                     </a>
                 </li>
@@ -52,7 +52,7 @@
                 <!-- Вперед -->
                 <li class="page-item"
                     th:classappend="${currentPage == totalPages - 1} ? disabled">
-                    <a class="page-link" th:href="|?page=${currentPage + 1}&size=${pageSize}&sort=${sortField},${sortDir}|">
+                    <a class="page-link" th:href="@{(page=${currentPage + 1}, size=${pageSize}, sort=${sortField} + ',' + ${sortDir}, q=${q})}">
                         &raquo;
                     </a>
                 </li>

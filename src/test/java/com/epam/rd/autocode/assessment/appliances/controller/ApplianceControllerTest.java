@@ -27,6 +27,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -62,7 +63,7 @@ class ApplianceControllerTest {
                 PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "id")),
                 1
         );
-        when(applianceService.findAll(any())).thenReturn(page);
+        when(applianceService.search(any(), any())).thenReturn(page);
 
         mockMvc.perform(get("/appliances"))
                 .andExpect(status().isOk())
@@ -78,7 +79,7 @@ class ApplianceControllerTest {
     @Test
     @DisplayName("GET /appliances?sort=name,desc: сортування з query-параметра має передаватись у сервіс")
     void getAppliances_withCustomSort_shouldBindFromRequest() throws Exception {
-        when(applianceService.findAll(any(Pageable.class)))
+        when(applianceService.search(any(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
 
         mockMvc.perform(get("/appliances").param("sort", "name,desc"))
@@ -86,9 +87,21 @@ class ApplianceControllerTest {
                 .andExpect(model().attribute("sortDir", "desc"));
 
         ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
-        verify(applianceService).findAll(captor.capture());
+        verify(applianceService).search(isNull(), captor.capture());
         assertThat(captor.getValue().getSort().getOrderFor("name").getDirection())
                 .isEqualTo(Sort.Direction.DESC);
+    }
+
+    @Test
+    @DisplayName("GET /appliances?q=fridge: повинен передати пошуковий запит у сервіс і в модель")
+    void getAppliances_withSearchQuery_shouldPassQueryToServiceAndModel() throws Exception {
+        when(applianceService.search(eq("fridge"), any())).thenReturn(new PageImpl<>(List.of()));
+
+        mockMvc.perform(get("/appliances").param("q", "fridge"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("q", "fridge"));
+
+        verify(applianceService).search(eq("fridge"), any());
     }
 
     @Test

@@ -120,6 +120,40 @@ public class ApplianceServiceTest {
     }
 
     @Test
+    @DisplayName("search: якщо запит порожній — повинен делегувати у findAll(Pageable)")
+    void search_whenQueryBlank_shouldDelegateToFindAll() {
+        Pageable pageable = PageRequest.of(0, 5);
+        Appliance appliance = new Appliance();
+        ApplianceResponseDTO dto = new ApplianceResponseDTO();
+        Page<Appliance> page = new PageImpl<>(List.of(appliance), pageable, 1);
+
+        when(applianceRepository.findAll(pageable)).thenReturn(page);
+        when(modelMapper.map(appliance, ApplianceResponseDTO.class)).thenReturn(dto);
+
+        Page<ApplianceResponseDTO> result = applianceService.search("  ", pageable);
+
+        assertThat(result.getContent()).containsExactly(dto);
+        verify(applianceRepository, never()).findByNameContainingIgnoreCase(any(), any());
+    }
+
+    @Test
+    @DisplayName("search: якщо запит непорожній — повинен шукати за назвою без врахування регістру")
+    void search_whenQueryProvided_shouldSearchByName() {
+        Pageable pageable = PageRequest.of(0, 5);
+        Appliance appliance = new Appliance();
+        ApplianceResponseDTO dto = new ApplianceResponseDTO();
+        Page<Appliance> page = new PageImpl<>(List.of(appliance), pageable, 1);
+
+        when(applianceRepository.findByNameContainingIgnoreCase("fridge", pageable)).thenReturn(page);
+        when(modelMapper.map(appliance, ApplianceResponseDTO.class)).thenReturn(dto);
+
+        Page<ApplianceResponseDTO> result = applianceService.search(" fridge ", pageable);
+
+        assertThat(result.getContent()).containsExactly(dto);
+        verify(applianceRepository, never()).findAll(pageable);
+    }
+
+    @Test
     @DisplayName("findById: повинен повернути ApplianceRequestDTO з manufacturerId якщо прилад знайдено")
     void findById_whenFound_shouldReturnDTOWithManufacturerId() {
         Manufacturer manufacturer = new Manufacturer(5L, "LG");

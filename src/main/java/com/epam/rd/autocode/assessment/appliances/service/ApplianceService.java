@@ -10,6 +10,7 @@ import java.util.List;
 public interface ApplianceService {
     List<ApplianceResponseDTO> findAll();
     Page<ApplianceResponseDTO> findAll(Pageable pageable);
+    Page<ApplianceResponseDTO> search(String name, Pageable pageable);
     void saveAppliance(ApplianceRequestDTO dto);
     ApplianceRequestDTO findById(Long id);
     void updateAppliance(Long id, ApplianceRequestDTO dto);
