@@ -37,6 +37,9 @@ public class EmployeeServiceTest {
     @Mock
     private ModelMapper modelMapper;
 
+    @Mock
+    private EmailUniquenessService emailUniquenessService;
+
     @InjectMocks
     private EmployeeServiceImpl employeeService;
 
@@ -53,7 +56,7 @@ public class EmployeeServiceTest {
         employeeService.saveEmployee(dto);
 
         ArgumentCaptor<Employee> captor = ArgumentCaptor.forClass(Employee.class);
-        verify(employeeRepository).save(captor.capture());
+        verify(employeeRepository).saveAndFlush(captor.capture());
         assertThat(captor.getValue().getPassword()).isEqualTo("encodedPassword");
     }
 
@@ -142,7 +145,7 @@ public class EmployeeServiceTest {
         employeeService.updateEmployee(1L, dto);
 
         ArgumentCaptor<Employee> captor = ArgumentCaptor.forClass(Employee.class);
-        verify(employeeRepository).save(captor.capture());
+        verify(employeeRepository).saveAndFlush(captor.capture());
 
         Employee saved = captor.getValue();
         assertThat(saved.getName()).isEqualTo("Іван");
@@ -164,7 +167,7 @@ public class EmployeeServiceTest {
 
         verifyNoInteractions(passwordEncoder);
         ArgumentCaptor<Employee> captor = ArgumentCaptor.forClass(Employee.class);
-        verify(employeeRepository).save(captor.capture());
+        verify(employeeRepository).saveAndFlush(captor.capture());
         assertThat(captor.getValue().getPassword()).isEqualTo("oldEncoded");
     }
 

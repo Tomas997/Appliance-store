@@ -7,10 +7,13 @@ import com.epam.rd.autocode.assessment.appliances.dto.EmployeeResponseDTO;
 import com.epam.rd.autocode.assessment.appliances.dto.EmployeeUpdateDTO;
 import com.epam.rd.autocode.assessment.appliances.model.Employee;
 import com.epam.rd.autocode.assessment.appliances.repository.EmployeeRepository;
+import com.epam.rd.autocode.assessment.appliances.exception.EmailAlreadyInUseException;
 import com.epam.rd.autocode.assessment.appliances.exception.ResourceNotFoundException;
+import com.epam.rd.autocode.assessment.appliances.service.EmailUniquenessService;
 import com.epam.rd.autocode.assessment.appliances.service.EmployeeService;
 import lombok.AllArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -27,6 +30,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final EmployeeRepository employeeRepository;
     private final PasswordEncoder passwordEncoder;
     private final ModelMapper modelMapper;
+    private final EmailUniquenessService emailUniquenessService;
 
     @Override
     @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
@@ -48,9 +52,14 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Transactional
     @PreAuthorize("hasRole('ADMIN')")
     public void saveEmployee(EmployeeRequestDTO dto) {
+        emailUniquenessService.verifyNotAdminEmail(dto.getEmail());
         Employee employee = toEntity(dto);
         employee.setPassword(passwordEncoder.encode(dto.getPassword()));
-        employeeRepository.save(employee);
+        try {
+            employeeRepository.saveAndFlush(employee);
+        } catch (DataIntegrityViolationException e) {
+            throw new EmailAlreadyInUseException(dto.getEmail());
+        }
     }
 
     @Override
@@ -68,13 +77,18 @@ public class EmployeeServiceImpl implements EmployeeService {
     public void updateEmployee(Long id, EmployeeUpdateDTO dto) {
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee", id));
+        emailUniquenessService.verifyNotAdminEmail(dto.getEmail());
         employee.setName(dto.getName());
         employee.setEmail(dto.getEmail());
         employee.setDepartment(dto.getDepartment());
         if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
             employee.setPassword(passwordEncoder.encode(dto.getPassword()));
         }
-        employeeRepository.save(employee);
+        try {
+            employeeRepository.saveAndFlush(employee);
+        } catch (DataIntegrityViolationException e) {
+            throw new EmailAlreadyInUseException(dto.getEmail());
+        }
     }
 
     @Override

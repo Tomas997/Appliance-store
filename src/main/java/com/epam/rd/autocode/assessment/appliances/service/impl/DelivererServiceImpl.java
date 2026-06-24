@@ -4,11 +4,14 @@ import com.epam.rd.autocode.assessment.appliances.aspect.Loggable;
 import com.epam.rd.autocode.assessment.appliances.dto.DelivererRequestDTO;
 import com.epam.rd.autocode.assessment.appliances.dto.DelivererResponseDTO;
 import com.epam.rd.autocode.assessment.appliances.dto.DelivererUpdateDTO;
+import com.epam.rd.autocode.assessment.appliances.exception.EmailAlreadyInUseException;
 import com.epam.rd.autocode.assessment.appliances.exception.ResourceNotFoundException;
 import com.epam.rd.autocode.assessment.appliances.model.Deliverer;
 import com.epam.rd.autocode.assessment.appliances.repository.DelivererRepository;
 import com.epam.rd.autocode.assessment.appliances.service.DelivererService;
+import com.epam.rd.autocode.assessment.appliances.service.EmailUniquenessService;
 import lombok.AllArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -24,6 +27,7 @@ import java.util.List;
 public class DelivererServiceImpl implements DelivererService {
     private final DelivererRepository delivererRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailUniquenessService emailUniquenessService;
 
     @Override
     @PreAuthorize("hasRole('ADMIN')")
@@ -44,11 +48,16 @@ public class DelivererServiceImpl implements DelivererService {
     @Transactional
     @PreAuthorize("hasRole('ADMIN')")
     public void saveDeliverer(DelivererRequestDTO dto) {
+        emailUniquenessService.verifyNotAdminEmail(dto.getEmail());
         Deliverer deliverer = new Deliverer();
         deliverer.setName(dto.getName());
         deliverer.setEmail(dto.getEmail());
         deliverer.setPassword(passwordEncoder.encode(dto.getPassword()));
-        delivererRepository.save(deliverer);
+        try {
+            delivererRepository.saveAndFlush(deliverer);
+        } catch (DataIntegrityViolationException e) {
+            throw new EmailAlreadyInUseException(dto.getEmail());
+        }
     }
 
     @Override
@@ -69,12 +78,17 @@ public class DelivererServiceImpl implements DelivererService {
     public void updateDeliverer(Long id, DelivererUpdateDTO dto) {
         Deliverer deliverer = delivererRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Deliverer", id));
+        emailUniquenessService.verifyNotAdminEmail(dto.getEmail());
         deliverer.setName(dto.getName());
         deliverer.setEmail(dto.getEmail());
         if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
             deliverer.setPassword(passwordEncoder.encode(dto.getPassword()));
         }
-        delivererRepository.save(deliverer);
+        try {
+            delivererRepository.saveAndFlush(deliverer);
+        } catch (DataIntegrityViolationException e) {
+            throw new EmailAlreadyInUseException(dto.getEmail());
+        }
     }
 
     @Override

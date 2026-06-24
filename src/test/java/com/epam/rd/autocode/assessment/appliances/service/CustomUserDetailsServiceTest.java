@@ -3,9 +3,7 @@ package com.epam.rd.autocode.assessment.appliances.service;
 import com.epam.rd.autocode.assessment.appliances.model.Client;
 import com.epam.rd.autocode.assessment.appliances.model.Deliverer;
 import com.epam.rd.autocode.assessment.appliances.model.Employee;
-import com.epam.rd.autocode.assessment.appliances.repository.ClientRepository;
-import com.epam.rd.autocode.assessment.appliances.repository.DelivererRepository;
-import com.epam.rd.autocode.assessment.appliances.repository.EmployeeRepository;
+import com.epam.rd.autocode.assessment.appliances.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,19 +18,13 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 public class CustomUserDetailsServiceTest {
 
     @Mock
-    private EmployeeRepository employeeRepository;
-
-    @Mock
-    private ClientRepository clientRepository;
-
-    @Mock
-    private DelivererRepository delivererRepository;
+    private UserRepository userRepository;
 
     @InjectMocks
     private CustomUserDetailsService customUserDetailsService;
@@ -42,7 +34,7 @@ public class CustomUserDetailsServiceTest {
     void loadUserByUsername_whenEmployeeFound_shouldReturnUserDetailsWithEmployeeRole() {
         Employee employee = new Employee(1L, "Andrii", "andrii@kpi.ua", "encodedPassword", "IT");
 
-        when(employeeRepository.findByEmail("andrii@kpi.ua")).thenReturn(Optional.of(employee));
+        when(userRepository.findByEmail("andrii@kpi.ua")).thenReturn(Optional.of(employee));
 
         UserDetails userDetails = customUserDetailsService.loadUserByUsername("andrii@kpi.ua");
 
@@ -51,9 +43,6 @@ public class CustomUserDetailsServiceTest {
         assertThat(userDetails.getAuthorities())
                 .extracting(GrantedAuthority::getAuthority)
                 .containsExactly("ROLE_EMPLOYEE");
-
-        verifyNoInteractions(clientRepository);
-        verifyNoInteractions(delivererRepository);
     }
 
     @Test
@@ -61,8 +50,7 @@ public class CustomUserDetailsServiceTest {
     void loadUserByUsername_whenClientFound_shouldReturnUserDetailsWithClientRole() {
         Client client = new Client(2L, "Olena", "olena@test.com", "encodedPassword", "1234");
 
-        when(employeeRepository.findByEmail("olena@test.com")).thenReturn(Optional.empty());
-        when(clientRepository.findByEmail("olena@test.com")).thenReturn(Optional.of(client));
+        when(userRepository.findByEmail("olena@test.com")).thenReturn(Optional.of(client));
 
         UserDetails userDetails = customUserDetailsService.loadUserByUsername("olena@test.com");
 
@@ -71,8 +59,6 @@ public class CustomUserDetailsServiceTest {
         assertThat(userDetails.getAuthorities())
                 .extracting(GrantedAuthority::getAuthority)
                 .containsExactly("ROLE_CLIENT");
-
-        verifyNoInteractions(delivererRepository);
     }
 
     @Test
@@ -80,9 +66,7 @@ public class CustomUserDetailsServiceTest {
     void loadUserByUsername_whenDelivererFound_shouldReturnUserDetailsWithDelivererRole() {
         Deliverer deliverer = new Deliverer(3L, "Petro", "petro@test.com", "encodedPassword");
 
-        when(employeeRepository.findByEmail("petro@test.com")).thenReturn(Optional.empty());
-        when(clientRepository.findByEmail("petro@test.com")).thenReturn(Optional.empty());
-        when(delivererRepository.findByEmail("petro@test.com")).thenReturn(Optional.of(deliverer));
+        when(userRepository.findByEmail("petro@test.com")).thenReturn(Optional.of(deliverer));
 
         UserDetails userDetails = customUserDetailsService.loadUserByUsername("petro@test.com");
 
@@ -94,11 +78,9 @@ public class CustomUserDetailsServiceTest {
     }
 
     @Test
-    @DisplayName("loadUserByUsername: якщо користувача не знайдено в жодному репозиторії — повинен кинути UsernameNotFoundException")
-    void loadUserByUsername_whenUserNotFoundAnywhere_shouldThrowUsernameNotFoundException() {
-        when(employeeRepository.findByEmail("unknown@test.com")).thenReturn(Optional.empty());
-        when(clientRepository.findByEmail("unknown@test.com")).thenReturn(Optional.empty());
-        when(delivererRepository.findByEmail("unknown@test.com")).thenReturn(Optional.empty());
+    @DisplayName("loadUserByUsername: якщо користувача не знайдено — повинен кинути UsernameNotFoundException")
+    void loadUserByUsername_whenUserNotFound_shouldThrowUsernameNotFoundException() {
+        when(userRepository.findByEmail("unknown@test.com")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> customUserDetailsService.loadUserByUsername("unknown@test.com"))
                 .isInstanceOf(UsernameNotFoundException.class)

@@ -31,6 +31,9 @@ public class DelivererServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private EmailUniquenessService emailUniquenessService;
+
     @InjectMocks
     private DelivererServiceImpl delivererService;
 
@@ -47,7 +50,7 @@ public class DelivererServiceTest {
         delivererService.saveDeliverer(dto);
 
         ArgumentCaptor<Deliverer> captor = ArgumentCaptor.forClass(Deliverer.class);
-        verify(delivererRepository).save(captor.capture());
+        verify(delivererRepository).saveAndFlush(captor.capture());
 
         Deliverer saved = captor.getValue();
         assertThat(saved.getName()).isEqualTo("Andrii");
@@ -140,7 +143,7 @@ public class DelivererServiceTest {
         delivererService.updateDeliverer(1L, dto);
 
         ArgumentCaptor<Deliverer> captor = ArgumentCaptor.forClass(Deliverer.class);
-        verify(delivererRepository).save(captor.capture());
+        verify(delivererRepository).saveAndFlush(captor.capture());
 
         Deliverer saved = captor.getValue();
         assertThat(saved.getName()).isEqualTo("Andrii");
@@ -162,7 +165,7 @@ public class DelivererServiceTest {
 
         verifyNoInteractions(passwordEncoder);
         ArgumentCaptor<Deliverer> captor = ArgumentCaptor.forClass(Deliverer.class);
-        verify(delivererRepository).save(captor.capture());
+        verify(delivererRepository).saveAndFlush(captor.capture());
         assertThat(captor.getValue().getPassword()).isEqualTo("oldEncoded");
     }
 
@@ -181,7 +184,7 @@ public class DelivererServiceTest {
 
         verifyNoInteractions(passwordEncoder);
         ArgumentCaptor<Deliverer> captor = ArgumentCaptor.forClass(Deliverer.class);
-        verify(delivererRepository).save(captor.capture());
+        verify(delivererRepository).saveAndFlush(captor.capture());
         assertThat(captor.getValue().getPassword()).isEqualTo("oldEncoded");
     }
 

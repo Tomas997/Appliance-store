@@ -35,6 +35,9 @@ public class ClientServiceTest {
     @Mock
     private ModelMapper modelMapper;
 
+    @Mock
+    private EmailUniquenessService emailUniquenessService;
+
     @InjectMocks
     private ClientServiceImpl clientService;
 
@@ -52,7 +55,7 @@ public class ClientServiceTest {
         clientService.saveClient(clientRequestDTO);
 
         ArgumentCaptor<Client> argumentCaptor = ArgumentCaptor.forClass(Client.class);
-        verify(clientRepository).save(argumentCaptor.capture());
+        verify(clientRepository).saveAndFlush(argumentCaptor.capture());
 
         assertThat(argumentCaptor.getValue().getPassword()).isEqualTo("encodedPassword");
     }
@@ -144,7 +147,7 @@ public class ClientServiceTest {
         clientService.updateClient(1L,dto);
 
         ArgumentCaptor<Client> captor = ArgumentCaptor.forClass(Client.class);
-        verify(clientRepository).save(captor.capture());
+        verify(clientRepository).saveAndFlush(captor.capture());
 
         Client saved = captor.getValue();
 
@@ -167,7 +170,7 @@ public class ClientServiceTest {
 
         verifyNoInteractions(passwordEncoder);
         ArgumentCaptor<Client> captor = ArgumentCaptor.forClass(Client.class);
-        verify(clientRepository).save(captor.capture());
+        verify(clientRepository).saveAndFlush(captor.capture());
         Client saved = captor.getValue();
 
         assertThat(saved.getPassword()).isEqualTo("oldEncoded");

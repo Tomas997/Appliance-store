@@ -9,13 +9,13 @@ import com.epam.rd.autocode.assessment.appliances.exception.ResourceNotFoundExce
 import com.epam.rd.autocode.assessment.appliances.model.Client;
 import com.epam.rd.autocode.assessment.appliances.repository.ClientRepository;
 import com.epam.rd.autocode.assessment.appliances.service.ClientService;
+import com.epam.rd.autocode.assessment.appliances.service.EmailUniquenessService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -31,22 +31,20 @@ public class ClientServiceImpl implements ClientService {
     private final ClientRepository clientRepository;
     private final PasswordEncoder passwordEncoder;
     private final ModelMapper modelMapper;
-
-    @Value("${admin.email}")
-    private String adminEmail;
+    private final EmailUniquenessService emailUniquenessService;
 
     @Override
     @Loggable
     @Transactional
     public void saveClient(ClientRequestDTO clientDto) {
-        if (clientDto.getEmail() != null
-                && (clientDto.getEmail().equalsIgnoreCase(adminEmail)
-                    || clientRepository.findByEmail(clientDto.getEmail()).isPresent())) {
-            throw new EmailAlreadyInUseException(clientDto.getEmail());
-        }
+        emailUniquenessService.verifyNotAdminEmail(clientDto.getEmail());
         Client client = toEntity(clientDto);
         client.setPassword(passwordEncoder.encode(clientDto.getPassword()));
-        clientRepository.save(client);
+        try {
+            clientRepository.saveAndFlush(client);
+        } catch (DataIntegrityViolationException e) {
+            throw new EmailAlreadyInUseException(clientDto.getEmail());
+        }
     }
 
     @Override
@@ -79,13 +77,18 @@ public class ClientServiceImpl implements ClientService {
     public void updateClient(Long id, ClientUpdateDTO clientDto) {
         Client client = clientRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Client", id));
+        emailUniquenessService.verifyNotAdminEmail(clientDto.getEmail());
         client.setName(clientDto.getName());
         client.setEmail(clientDto.getEmail());
         client.setCard(clientDto.getCard());
         if (clientDto.getPassword() != null && !clientDto.getPassword().isBlank()) {
             client.setPassword(passwordEncoder.encode(clientDto.getPassword()));
         }
-        clientRepository.save(client);
+        try {
+            clientRepository.saveAndFlush(client);
+        } catch (DataIntegrityViolationException e) {
+            throw new EmailAlreadyInUseException(clientDto.getEmail());
+        }
     }
 
     @Override
