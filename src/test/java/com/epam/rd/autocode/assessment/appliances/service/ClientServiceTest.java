@@ -3,6 +3,8 @@ package com.epam.rd.autocode.assessment.appliances.service;
 import com.epam.rd.autocode.assessment.appliances.dto.ClientRequestDTO;
 import com.epam.rd.autocode.assessment.appliances.dto.ClientResponseDTO;
 import com.epam.rd.autocode.assessment.appliances.dto.ClientUpdateDTO;
+import com.epam.rd.autocode.assessment.appliances.exception.EmailAlreadyInUseException;
+import com.epam.rd.autocode.assessment.appliances.exception.ResourceNotFoundException;
 import com.epam.rd.autocode.assessment.appliances.model.Client;
 import com.epam.rd.autocode.assessment.appliances.repository.ClientRepository;
 import com.epam.rd.autocode.assessment.appliances.service.impl.ClientServiceImpl;
@@ -14,6 +16,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -58,6 +61,22 @@ public class ClientServiceTest {
         verify(clientRepository).saveAndFlush(argumentCaptor.capture());
 
         assertThat(argumentCaptor.getValue().getPassword()).isEqualTo("encodedPassword");
+    }
+
+    @Test
+    @DisplayName("saveClient: якщо репозиторій кидає DataIntegrityViolationException — кинути EmailAlreadyInUseException")
+    void saveClient_whenEmailAlreadyExists_shouldThrowEmailAlreadyInUseException() {
+        ClientRequestDTO clientRequestDTO = new ClientRequestDTO();
+        clientRequestDTO.setEmail("dup@kpi.ua");
+        clientRequestDTO.setPassword("rawPassword");
+
+        Client mappedClient = new Client();
+        when(modelMapper.map(clientRequestDTO, Client.class)).thenReturn(mappedClient);
+        when(passwordEncoder.encode("rawPassword")).thenReturn("encodedPassword");
+        when(clientRepository.saveAndFlush(any())).thenThrow(new DataIntegrityViolationException("duplicate"));
+
+        assertThatThrownBy(() -> clientService.saveClient(clientRequestDTO))
+                .isInstanceOf(EmailAlreadyInUseException.class);
     }
 
     @Test
@@ -195,11 +214,25 @@ public class ClientServiceTest {
     @Test
     @DisplayName("updateClient: повинен кинути RuntimeException якщо клієнт не знайдений")
     void updateClient_whenClientNotFound_shouldThrow() {
-        when(clientRepository.findById(99L)).thenReturn(Optional.empty());
+        when(clientRepository.findById(404L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> clientService.updateClient(404L, new ClientUpdateDTO()))
-                .isInstanceOf(RuntimeException.class)
+                .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("404");
+    }
+
+    @Test
+    @DisplayName("updateClient: якщо репозиторій кидає DataIntegrityViolationException — кинути EmailAlreadyInUseException")
+    void updateClient_whenEmailAlreadyExists_shouldThrowEmailAlreadyInUseException() {
+        Client existingClient = new Client();
+        ClientUpdateDTO dto = new ClientUpdateDTO();
+        dto.setEmail("dup@kpi.ua");
+
+        when(clientRepository.findById(1L)).thenReturn(Optional.of(existingClient));
+        when(clientRepository.saveAndFlush(any())).thenThrow(new DataIntegrityViolationException("duplicate"));
+
+        assertThatThrownBy(() -> clientService.updateClient(1L, dto))
+                .isInstanceOf(EmailAlreadyInUseException.class);
     }
 
     @Test

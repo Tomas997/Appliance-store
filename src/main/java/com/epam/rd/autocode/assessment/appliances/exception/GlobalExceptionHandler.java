@@ -71,7 +71,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<Void> handleNoResourceFound(NoResourceFoundException ex) {
-        // expected/benign — e.g. browser auto-requesting /favicon.ico when none is configured
         log.debug("Static resource not found: {}", ex.getResourcePath());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }

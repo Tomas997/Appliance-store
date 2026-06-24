@@ -1,5 +1,6 @@
 package com.epam.rd.autocode.assessment.appliances.controller;
 
+import com.epam.rd.autocode.assessment.appliances.exception.EmailAlreadyInUseException;
 import com.epam.rd.autocode.assessment.appliances.service.ClientService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -14,6 +15,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
 import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -78,5 +80,21 @@ class RegistrationControllerTest {
                 .andExpect(view().name("register"));
 
         verify(clientService, never()).saveClient(any());
+    }
+
+    @Test
+    @DisplayName("POST /register: email вже зайнятий — повинен повернутись на форму з помилкою поля email")
+    void register_emailAlreadyInUse_shouldReturnFormWithFieldError() throws Exception {
+        doThrow(new EmailAlreadyInUseException("andrii@kpi.ua")).when(clientService).saveClient(any());
+
+        mockMvc.perform(post("/register")
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .param("name", "Andrii")
+                        .param("email", "andrii@kpi.ua")
+                        .param("password", "Admin123")
+                        .param("card", "1234-5678"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("register"))
+                .andExpect(model().attributeHasFieldErrors("client", "email"));
     }
 }

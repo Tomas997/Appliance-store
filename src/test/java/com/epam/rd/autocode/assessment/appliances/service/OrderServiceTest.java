@@ -8,6 +8,7 @@ import com.epam.rd.autocode.assessment.appliances.exception.ResourceNotFoundExce
 import com.epam.rd.autocode.assessment.appliances.model.*;
 import com.epam.rd.autocode.assessment.appliances.repository.*;
 import com.epam.rd.autocode.assessment.appliances.service.impl.OrderServiceImpl;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,6 +17,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.*;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
 import java.util.*;
@@ -53,6 +59,7 @@ public class OrderServiceTest {
         employee.setName("Олег");
         Client client = new Client();
         client.setName("Марія");
+        client.setEmail("maria@store.com");
 
         Orders order = new Orders();
         order.setEmployee(employee);
@@ -60,6 +67,17 @@ public class OrderServiceTest {
         order.setStatus(OrderStatus.PENDING_EMPLOYEE);
         order.setOrderRowSet(new HashSet<>());
         return order;
+    }
+
+    private void authenticateAs(String email, String role) {
+        List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(role));
+        SecurityContextHolder.getContext()
+                .setAuthentication(new UsernamePasswordAuthenticationToken(email, null, authorities));
+    }
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -217,6 +235,58 @@ public class OrderServiceTest {
         assertThatThrownBy(() -> orderService.findResponseById(99L))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("99");
+    }
+
+    @Test
+    @DisplayName("findResponseById: без автентифікації (немає Authentication) — повинен дозволити доступ")
+    void findResponseById_whenNoAuthentication_shouldAllowAccess() {
+        Orders order = buildOrder();
+        when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        assertThat(orderService.findResponseById(1L)).isNotNull();
+    }
+
+    @Test
+    @DisplayName("findResponseById: ADMIN — повинен мати доступ до чужого замовлення")
+    void findResponseById_whenAdmin_shouldAllowAccessToAnyOrder() {
+        Orders order = buildOrder();
+        when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
+        authenticateAs("admin@store.com", "ROLE_ADMIN");
+
+        assertThat(orderService.findResponseById(1L)).isNotNull();
+    }
+
+    @Test
+    @DisplayName("findResponseById: CLIENT-власник замовлення — повинен мати доступ")
+    void findResponseById_whenClientOwnsOrder_shouldAllowAccess() {
+        Orders order = buildOrder();
+        when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
+        authenticateAs("maria@store.com", "ROLE_CLIENT");
+
+        assertThat(orderService.findResponseById(1L)).isNotNull();
+    }
+
+    @Test
+    @DisplayName("findResponseById: CLIENT не власник замовлення — повинен кинути AccessDeniedException")
+    void findResponseById_whenClientDoesNotOwnOrder_shouldThrowAccessDenied() {
+        Orders order = buildOrder();
+        when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
+        authenticateAs("stranger@store.com", "ROLE_CLIENT");
+
+        assertThatThrownBy(() -> orderService.findResponseById(1L))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    @DisplayName("findResponseById: CLIENT і замовлення без клієнта — повинен кинути AccessDeniedException")
+    void findResponseById_whenClientAndOrderHasNoClient_shouldThrowAccessDenied() {
+        Orders order = buildOrder();
+        order.setClient(null);
+        when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
+        authenticateAs("maria@store.com", "ROLE_CLIENT");
+
+        assertThatThrownBy(() -> orderService.findResponseById(1L))
+                .isInstanceOf(AccessDeniedException.class);
     }
 
     @Test
@@ -392,6 +462,18 @@ public class OrderServiceTest {
     }
 
     @Test
+    @DisplayName("submitForReview: CLIENT не власник замовлення — повинен кинути AccessDeniedException")
+    void submitForReview_whenClientDoesNotOwnOrder_shouldThrowAccessDenied() {
+        Orders order = buildOrder();
+        order.setStatus(OrderStatus.DRAFT);
+        when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
+        authenticateAs("stranger@store.com", "ROLE_CLIENT");
+
+        assertThatThrownBy(() -> orderService.submitForReview(1L))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
     @DisplayName("submitForReview: якщо ціна приладу змінилась — повинен оновити суму рядка і повернути зміну")
     void submitForReview_whenPriceChanged_shouldUpdateAmountAndReturnChange() {
         Orders order = buildOrder();
@@ -483,6 +565,17 @@ public class OrderServiceTest {
         assertThat(saved.getCancelReason()).isEqualTo("Client changed mind");
         assertThat(saved.getCancelledBy()).isEqualTo("maria@store.com");
         assertThat(saved.getCancelledAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("cancelOrder: CLIENT не власник замовлення — повинен кинути AccessDeniedException")
+    void cancelOrder_whenClientDoesNotOwnOrder_shouldThrowAccessDenied() {
+        Orders order = buildOrder();
+        when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
+        authenticateAs("stranger@store.com", "ROLE_CLIENT");
+
+        assertThatThrownBy(() -> orderService.cancelOrder(1L, "Не моє замовлення", "stranger@store.com"))
+                .isInstanceOf(AccessDeniedException.class);
     }
 
     @Test
@@ -743,6 +836,17 @@ public class OrderServiceTest {
     }
 
     @Test
+    @DisplayName("deleteOrderById: CLIENT не власник замовлення — повинен кинути AccessDeniedException")
+    void deleteOrderById_whenClientDoesNotOwnOrder_shouldThrowAccessDenied() {
+        Orders order = buildOrder();
+        when(ordersRepository.findById(8L)).thenReturn(Optional.of(order));
+        authenticateAs("stranger@store.com", "ROLE_CLIENT");
+
+        assertThatThrownBy(() -> orderService.deleteOrderById(8L))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
     @DisplayName("deleteOrderById: якщо замовлення доставляється — кинути InvalidOrderStateException")
     void deleteOrderById_whenDelivering_shouldThrow() {
         Orders order = buildOrder();
@@ -818,6 +922,17 @@ public class OrderServiceTest {
     }
 
     @Test
+    @DisplayName("addRowToOrder: CLIENT не власник замовлення — повинен кинути AccessDeniedException")
+    void addRowToOrder_whenClientDoesNotOwnOrder_shouldThrowAccessDenied() {
+        Orders order = buildOrder();
+        when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
+        authenticateAs("stranger@store.com", "ROLE_CLIENT");
+
+        assertThatThrownBy(() -> orderService.addRowToOrder(1L, 2L, 3L))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
     @DisplayName("addRowToOrder: якщо статус не PENDING_EMPLOYEE — кинути InvalidOrderStateException")
     void addRowToOrder_whenNotPendingEmployee_shouldThrow() {
         Orders order = buildOrder();
@@ -875,6 +990,19 @@ public class OrderServiceTest {
     }
 
     @Test
+    @DisplayName("deleteRowFromOrder: CLIENT не власник замовлення — повинен кинути AccessDeniedException")
+    void deleteRowFromOrder_whenClientDoesNotOwnOrder_shouldThrowAccessDenied() {
+        Orders order = buildOrder();
+        OrderRow row = new OrderRow();
+        row.setOrder(order);
+        when(orderRowRepository.findById(5L)).thenReturn(Optional.of(row));
+        authenticateAs("stranger@store.com", "ROLE_CLIENT");
+
+        assertThatThrownBy(() -> orderService.deleteRowFromOrder(5L))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
     @DisplayName("deleteRowFromOrder: якщо замовлення не в DRAFT/PENDING_EMPLOYEE — кинути InvalidOrderStateException")
     void deleteRowFromOrder_whenOrderLocked_shouldThrow() {
         Orders order = buildOrder();
@@ -914,6 +1042,17 @@ public class OrderServiceTest {
         Set<OrderRow> result = orderService.getOrderRows(1L);
 
         assertThat(result).containsExactlyInAnyOrder(row1, row2);
+    }
+
+    @Test
+    @DisplayName("getOrderRows: CLIENT не власник замовлення — повинен кинути AccessDeniedException")
+    void getOrderRows_whenClientDoesNotOwnOrder_shouldThrowAccessDenied() {
+        Orders order = buildOrder();
+        when(ordersRepository.findById(1L)).thenReturn(Optional.of(order));
+        authenticateAs("stranger@store.com", "ROLE_CLIENT");
+
+        assertThatThrownBy(() -> orderService.getOrderRows(1L))
+                .isInstanceOf(AccessDeniedException.class);
     }
 
     @Test

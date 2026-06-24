@@ -3,6 +3,7 @@ package com.epam.rd.autocode.assessment.appliances.service;
 import com.epam.rd.autocode.assessment.appliances.model.Client;
 import com.epam.rd.autocode.assessment.appliances.model.Deliverer;
 import com.epam.rd.autocode.assessment.appliances.model.Employee;
+import com.epam.rd.autocode.assessment.appliances.model.User;
 import com.epam.rd.autocode.assessment.appliances.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -85,5 +86,17 @@ public class CustomUserDetailsServiceTest {
         assertThatThrownBy(() -> customUserDetailsService.loadUserByUsername("unknown@test.com"))
                 .isInstanceOf(UsernameNotFoundException.class)
                 .hasMessageContaining("unknown@test.com");
+    }
+
+    @Test
+    @DisplayName("loadUserByUsername: якщо знайдений User не є жодним відомим підтипом — повинен кинути UsernameNotFoundException")
+    void loadUserByUsername_whenUserHasNoKnownSubtype_shouldThrowUsernameNotFoundException() {
+        User plainUser = new User(4L, "Ghost", "ghost@test.com", "encodedPassword");
+
+        when(userRepository.findByEmail("ghost@test.com")).thenReturn(Optional.of(plainUser));
+
+        assertThatThrownBy(() -> customUserDetailsService.loadUserByUsername("ghost@test.com"))
+                .isInstanceOf(UsernameNotFoundException.class)
+                .hasMessageContaining("ghost@test.com");
     }
 }

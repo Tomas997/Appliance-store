@@ -3,6 +3,7 @@ package com.epam.rd.autocode.assessment.appliances.service;
 import com.epam.rd.autocode.assessment.appliances.dto.EmployeeRequestDTO;
 import com.epam.rd.autocode.assessment.appliances.dto.EmployeeResponseDTO;
 import com.epam.rd.autocode.assessment.appliances.dto.EmployeeUpdateDTO;
+import com.epam.rd.autocode.assessment.appliances.exception.EmailAlreadyInUseException;
 import com.epam.rd.autocode.assessment.appliances.exception.ResourceNotFoundException;
 import com.epam.rd.autocode.assessment.appliances.model.Employee;
 import com.epam.rd.autocode.assessment.appliances.repository.EmployeeRepository;
@@ -15,6 +16,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -58,6 +60,22 @@ public class EmployeeServiceTest {
         ArgumentCaptor<Employee> captor = ArgumentCaptor.forClass(Employee.class);
         verify(employeeRepository).saveAndFlush(captor.capture());
         assertThat(captor.getValue().getPassword()).isEqualTo("encodedPassword");
+    }
+
+    @Test
+    @DisplayName("saveEmployee: якщо репозиторій кидає DataIntegrityViolationException — кинути EmailAlreadyInUseException")
+    void saveEmployee_whenEmailAlreadyExists_shouldThrowEmailAlreadyInUseException() {
+        EmployeeRequestDTO dto = new EmployeeRequestDTO();
+        dto.setEmail("dup@epam.com");
+        dto.setPassword("rawPassword");
+
+        Employee mapped = new Employee();
+        when(modelMapper.map(dto, Employee.class)).thenReturn(mapped);
+        when(passwordEncoder.encode("rawPassword")).thenReturn("encodedPassword");
+        when(employeeRepository.saveAndFlush(any())).thenThrow(new DataIntegrityViolationException("duplicate"));
+
+        assertThatThrownBy(() -> employeeService.saveEmployee(dto))
+                .isInstanceOf(EmailAlreadyInUseException.class);
     }
 
     @Test
@@ -194,6 +212,20 @@ public class EmployeeServiceTest {
         assertThatThrownBy(() -> employeeService.updateEmployee(99L, new EmployeeUpdateDTO()))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("99");
+    }
+
+    @Test
+    @DisplayName("updateEmployee: якщо репозиторій кидає DataIntegrityViolationException — кинути EmailAlreadyInUseException")
+    void updateEmployee_whenEmailAlreadyExists_shouldThrowEmailAlreadyInUseException() {
+        Employee existing = new Employee();
+        EmployeeUpdateDTO dto = new EmployeeUpdateDTO();
+        dto.setEmail("dup@epam.com");
+
+        when(employeeRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(employeeRepository.saveAndFlush(any())).thenThrow(new DataIntegrityViolationException("duplicate"));
+
+        assertThatThrownBy(() -> employeeService.updateEmployee(1L, dto))
+                .isInstanceOf(EmailAlreadyInUseException.class);
     }
 
     @Test

@@ -3,6 +3,7 @@ package com.epam.rd.autocode.assessment.appliances.service;
 import com.epam.rd.autocode.assessment.appliances.dto.DelivererRequestDTO;
 import com.epam.rd.autocode.assessment.appliances.dto.DelivererResponseDTO;
 import com.epam.rd.autocode.assessment.appliances.dto.DelivererUpdateDTO;
+import com.epam.rd.autocode.assessment.appliances.exception.EmailAlreadyInUseException;
 import com.epam.rd.autocode.assessment.appliances.model.Deliverer;
 import com.epam.rd.autocode.assessment.appliances.repository.DelivererRepository;
 import com.epam.rd.autocode.assessment.appliances.service.impl.DelivererServiceImpl;
@@ -13,6 +14,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -56,6 +58,21 @@ public class DelivererServiceTest {
         assertThat(saved.getName()).isEqualTo("Andrii");
         assertThat(saved.getEmail()).isEqualTo("andrii@kpi.ua");
         assertThat(saved.getPassword()).isEqualTo("encodedPassword");
+    }
+
+    @Test
+    @DisplayName("saveDeliverer: якщо репозиторій кидає DataIntegrityViolationException — кинути EmailAlreadyInUseException")
+    void saveDeliverer_whenEmailAlreadyExists_shouldThrowEmailAlreadyInUseException() {
+        DelivererRequestDTO dto = new DelivererRequestDTO();
+        dto.setName("Andrii");
+        dto.setEmail("dup@kpi.ua");
+        dto.setPassword("rawPassword");
+
+        when(passwordEncoder.encode("rawPassword")).thenReturn("encodedPassword");
+        when(delivererRepository.saveAndFlush(any())).thenThrow(new DataIntegrityViolationException("duplicate"));
+
+        assertThatThrownBy(() -> delivererService.saveDeliverer(dto))
+                .isInstanceOf(EmailAlreadyInUseException.class);
     }
 
     @Test
@@ -196,6 +213,20 @@ public class DelivererServiceTest {
         assertThatThrownBy(() -> delivererService.updateDeliverer(404L, new DelivererUpdateDTO()))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("404");
+    }
+
+    @Test
+    @DisplayName("updateDeliverer: якщо репозиторій кидає DataIntegrityViolationException — кинути EmailAlreadyInUseException")
+    void updateDeliverer_whenEmailAlreadyExists_shouldThrowEmailAlreadyInUseException() {
+        Deliverer existingDeliverer = new Deliverer(1L, "OldName", "old@test.com", "oldEncoded");
+        DelivererUpdateDTO dto = new DelivererUpdateDTO();
+        dto.setEmail("dup@kpi.ua");
+
+        when(delivererRepository.findById(1L)).thenReturn(Optional.of(existingDeliverer));
+        when(delivererRepository.saveAndFlush(any())).thenThrow(new DataIntegrityViolationException("duplicate"));
+
+        assertThatThrownBy(() -> delivererService.updateDeliverer(1L, dto))
+                .isInstanceOf(EmailAlreadyInUseException.class);
     }
 
     @Test
