@@ -7,9 +7,11 @@ import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -56,6 +58,14 @@ public class GlobalExceptionHandler {
     public String handleTypeMismatch(MethodArgumentTypeMismatchException ex, Model model) {
         log.warn("Invalid identifier: {}", ex.getMessage());
         model.addAttribute("errorMessage", msg("error.invalid.id"));
+        return "error/not-found";
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public String handleAccessDenied(AccessDeniedException ex, Model model) {
+        log.warn("Access denied: {}", ex.getMessage());
+        model.addAttribute("errorMessage", msg("error.access.denied"));
         return "error/not-found";
     }
 

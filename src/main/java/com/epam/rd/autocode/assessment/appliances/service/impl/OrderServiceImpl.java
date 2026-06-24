@@ -12,7 +12,10 @@ import com.epam.rd.autocode.assessment.appliances.service.OrderService;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -99,8 +102,25 @@ public class OrderServiceImpl implements OrderService {
     public OrderResponseDTO findResponseById(Long id) {
         Orders order = ordersRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", id));
+        verifyOwnershipIfClient(order);
         Map<Long, BigDecimal> totals = totalAmountsByOrderId(List.of(order));
         return toDto(order, totals.getOrDefault(id, BigDecimal.ZERO));
+    }
+
+    private void verifyOwnershipIfClient(Orders order) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) {
+            return;
+        }
+        boolean isClient = auth.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_CLIENT"));
+        if (!isClient) {
+            return;
+        }
+        String email = auth.getName();
+        if (order.getClient() == null || !order.getClient().getEmail().equalsIgnoreCase(email)) {
+            throw new AccessDeniedException("You do not have permission to access this order");
+        }
     }
 
     @Override
@@ -135,6 +155,7 @@ public class OrderServiceImpl implements OrderService {
     public void deleteOrderById(Long id) {
         Orders order = ordersRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", id));
+        verifyOwnershipIfClient(order);
         if (order.getStatus() == OrderStatus.DELIVERING || order.getStatus() == OrderStatus.DELIVERED) {
             throw new InvalidOrderStateException("Cannot delete an order that is being delivered or already delivered");
         }
@@ -213,6 +234,7 @@ public class OrderServiceImpl implements OrderService {
     public List<OrderRowPriceChangeDTO> submitForReview(Long id) {
         Orders order = ordersRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", id));
+        verifyOwnershipIfClient(order);
         if (order.getStatus() != OrderStatus.DRAFT && order.getStatus() != OrderStatus.PENDING_EMPLOYEE) {
             throw new InvalidOrderStateException("Order cannot be submitted in its current state");
         }
@@ -246,6 +268,7 @@ public class OrderServiceImpl implements OrderService {
     public void cancelOrder(Long id, String reason, String cancelledByEmail) {
         Orders order = ordersRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", id));
+        verifyOwnershipIfClient(order);
         if (order.getStatus() == OrderStatus.DELIVERING || order.getStatus() == OrderStatus.DELIVERED) {
             throw new InvalidOrderStateException("Cannot cancel an order that is being delivered or already delivered");
         }
@@ -271,6 +294,7 @@ public class OrderServiceImpl implements OrderService {
         }
         Orders order = ordersRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
+        verifyOwnershipIfClient(order);
         if (order.getStatus() != OrderStatus.DRAFT && order.getStatus() != OrderStatus.PENDING_EMPLOYEE) {
             throw new InvalidOrderStateException("Cannot modify order in current state");
         }
@@ -291,6 +315,7 @@ public class OrderServiceImpl implements OrderService {
         OrderRow row = orderRowRepository.findById(rowId)
                 .orElseThrow(() -> new ResourceNotFoundException("OrderRow", rowId));
         Orders order = row.getOrder();
+        verifyOwnershipIfClient(order);
         if (order.getStatus() != OrderStatus.DRAFT && order.getStatus() != OrderStatus.PENDING_EMPLOYEE) {
             throw new InvalidOrderStateException("Cannot modify order in current state");
         }
@@ -301,6 +326,7 @@ public class OrderServiceImpl implements OrderService {
     public Set<OrderRow> getOrderRows(Long orderId) {
         Orders order = ordersRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
+        verifyOwnershipIfClient(order);
         return new HashSet<>(order.getOrderRowSet());
     }
 
